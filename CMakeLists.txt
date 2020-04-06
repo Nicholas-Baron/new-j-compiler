@@ -18,7 +18,7 @@ project(new_j_compiler CXX)
 
 add_executable(new_jc
         src/main.cpp
+		src/config.cpp
     )
 
-target_include_directories(new_jc PRIVATE external)
 set_property(TARGET new_jc PROPERTY CXX_STANDARD 17)
