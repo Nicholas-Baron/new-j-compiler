@@ -1,0 +1,4 @@
+# Formatting rules: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+IndentWidth: 4
+PointerAlignment: Middle
+ColumnLimit: 100
