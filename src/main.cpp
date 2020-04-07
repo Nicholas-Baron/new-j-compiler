@@ -1,7 +1,8 @@
 
 #include <iostream>
 
-#include "config.hpp"
+#include "config.h"
+#include "parser.h"
 
 int main(const int arg_count, const char ** args) {
     const auto user_args = parse_cmdline_args(arg_count, args);
@@ -16,4 +17,10 @@ int main(const int arg_count, const char ** args) {
         return 0;
     }
     std::cout << "File to read: " << user_args->input_filename << std::endl;
+
+    Parser p{user_args->input_filename};
+
+    while (p.peek().type() != TokenType::EndOfFile) {
+        std::cout << ' ' << p.next() << std::endl;
+    }
 }

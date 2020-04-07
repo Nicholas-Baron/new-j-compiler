@@ -1,5 +1,5 @@
 
-#include "config.hpp"
+#include "config.h"
 #include <iostream>
 
 [[nodiscard]] std::shared_ptr<const UserSettings> parse_cmdline_args(int arg_count,

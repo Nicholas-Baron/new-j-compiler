@@ -12,11 +12,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c2628945-4ce6-488a-8b55-c6961b276be4" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/config.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/config.hpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/parser.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/parser.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/token.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/external/cxxopts.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -43,10 +46,10 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="cf.advertisement.text.overridden" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="preferences.sourceCode.C/C++" />
+    <property name="settings.editor.selected.configurable" value="fileTemplates" />
   </component>
   <component name="RunManager">
-    <configuration name="new_jc" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="test.txt" PASS_PARENT_ENVS_2="true" PROJECT_NAME="new_j_compiler" TARGET_NAME="new_jc" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="new_j_compiler" RUN_TARGET_NAME="new_jc">
+    <configuration name="new_jc" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$PROJECT_DIR$/test.txt" PASS_PARENT_ENVS_2="true" PROJECT_NAME="new_j_compiler" TARGET_NAME="new_jc" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="new_j_compiler" RUN_TARGET_NAME="new_jc">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -60,7 +63,7 @@
       <option name="presentableId" value="Default" />
       <updated>1586208356936</updated>
       <workItem from="1586208358308" duration="1111000" />
-      <workItem from="1586214706821" duration="1672000" />
+      <workItem from="1586214706821" duration="10911000" />
     </task>
     <task id="LOCAL-00001" summary="Added a formatting system.">
       <created>1586211566055</created>
@@ -77,34 +80,38 @@
     <option name="LAST_COMMIT_MESSAGE" value="Added a formatting system." />
   </component>
   <component name="WindowStateProjectService">
-    <state x="424" y="213" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1586216378444">
+    <state x="424" y="213" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1586225619617">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state x="424" y="213" key="#com.intellij.execution.impl.EditConfigurationsDialog/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586216378444" />
+    <state x="424" y="213" key="#com.intellij.execution.impl.EditConfigurationsDialog/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586225619617" />
+    <state x="698" y="304" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1586222015888">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state x="698" y="304" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586222015888" />
     <state x="562" y="131" key="CommitChangelistDialog2" timestamp="1586211565974">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
     <state x="562" y="131" key="CommitChangelistDialog2/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586211565974" />
-    <state width="1874" height="297" key="GridCell.Tab.0.bottom" timestamp="1586216366767">
+    <state width="1874" height="297" key="GridCell.Tab.0.bottom" timestamp="1586225761758">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state width="1874" height="297" key="GridCell.Tab.0.bottom/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586216366767" />
-    <state width="1874" height="297" key="GridCell.Tab.0.center" timestamp="1586216366767">
+    <state width="1874" height="297" key="GridCell.Tab.0.bottom/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586225761758" />
+    <state width="1874" height="297" key="GridCell.Tab.0.center" timestamp="1586225761758">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state width="1874" height="297" key="GridCell.Tab.0.center/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586216366767" />
-    <state width="1874" height="297" key="GridCell.Tab.0.left" timestamp="1586216366767">
+    <state width="1874" height="297" key="GridCell.Tab.0.center/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586225761758" />
+    <state width="1874" height="297" key="GridCell.Tab.0.left" timestamp="1586225761758">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state width="1874" height="297" key="GridCell.Tab.0.left/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586216366767" />
-    <state width="1874" height="297" key="GridCell.Tab.0.right" timestamp="1586216366767">
+    <state width="1874" height="297" key="GridCell.Tab.0.left/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586225761758" />
+    <state width="1874" height="297" key="GridCell.Tab.0.right" timestamp="1586225761758">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state width="1874" height="297" key="GridCell.Tab.0.right/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586216366767" />
-    <state x="461" y="190" key="SettingsEditor" timestamp="1586211259412">
+    <state width="1874" height="297" key="GridCell.Tab.0.right/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586225761758" />
+    <state x="461" y="190" key="SettingsEditor" timestamp="1586217107469">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state x="461" y="190" key="SettingsEditor/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586211259412" />
+    <state x="461" y="190" key="SettingsEditor/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586217107469" />
     <state x="560" y="291" key="Vcs.Push.Dialog.v2" timestamp="1586211578943">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
@@ -113,9 +120,13 @@
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
     <state x="646" y="237" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586211451939" />
-    <state x="623" y="239" width="672" height="678" key="search.everywhere.popup" timestamp="1586215961413">
+    <state x="709" y="198" key="refactoring.ChangeSignatureDialog" timestamp="1586217654790">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
-    <state x="623" y="239" width="672" height="678" key="search.everywhere.popup/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586215961413" />
+    <state x="709" y="198" key="refactoring.ChangeSignatureDialog/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586217654790" />
+    <state x="623" y="239" width="672" height="678" key="search.everywhere.popup" timestamp="1586220986083">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state x="623" y="239" width="672" height="678" key="search.everywhere.popup/1920.0.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1586220986083" />
   </component>
 </project>
