@@ -66,6 +66,8 @@ Token Parser::next() {
     auto current_char = input_text->at(current_pos);
 
     const auto start = current_pos;
+    current_pos++;
+
     if (isalpha(current_char)) {
         while (isalnum(input_text->at(current_pos)))
             current_pos++;
@@ -79,7 +81,6 @@ Token Parser::next() {
 
     } else if (isdigit(current_char)) {
 
-        current_pos++;
         if (current_char == '0') {
             current_char = input_text->at(current_pos);
             if (tolower(current_char) == 'x') {
@@ -127,7 +128,6 @@ Token Parser::next() {
         }
 
     } else {
-        current_pos++;
         switch (current_char) {
         case ';':
             return {input_text, start, 1, TokenType ::Semi};
