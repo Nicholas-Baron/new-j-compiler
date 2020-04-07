@@ -30,11 +30,18 @@ class Token final {
         : src_text{text}, pos{position}, len{length}, token_type{type} {}
 
     [[nodiscard]] token_data get_data() const {
-        switch (token_type) {
+        switch (const auto & text = src_text->substr(pos, len); token_type) {
         case TokenType::Identifier:
-            return src_text->substr(pos, len);
+            return text;
         case TokenType::Int:
-            return std::stol(src_text->substr(pos, len));
+            if (len < 3)
+                return std::stol(text);
+            else if (tolower(text[1]) == 'x')
+                return std::stol(text, nullptr, 16);
+            else if (tolower(text[1]) == 'b')
+                return std::stol(text, nullptr, 2);
+            else
+                return std::stol(text, nullptr, 10);
         default:
             return token_type;
         }
