@@ -149,8 +149,7 @@ Token Lexer::next() {
 
 Token Lexer::peek() {
 
-    // If there is something peeked, we do not need to do any work.
-
+    // If there is nothing peeked, we need to read the next token.
     if (not peeked.has_value())
         peeked = this->next();
 
