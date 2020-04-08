@@ -18,7 +18,9 @@ enum struct TokenType {
     Int,
     Int32,
     Int64,
+    LParen,
     Newline,
+    RParen,
     Semi,
 };
 

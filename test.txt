@@ -1,1 +1,3 @@
 const x : int32 = 5
+
+func main print(x)

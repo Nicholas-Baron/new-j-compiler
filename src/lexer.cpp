@@ -137,6 +137,10 @@ Token Lexer::next() {
             return {input_text, start, 1, TokenType ::Assign};
         case '\n':
             return {input_text, start, 1, TokenType ::Newline};
+        case '(':
+            return {input_text, start, 1, TokenType ::LParen};
+        case ')':
+            return {input_text, start, 1, TokenType ::RParen};
         default:
             return {input_text, start, 1, TokenType ::EndOfFile};
         }
