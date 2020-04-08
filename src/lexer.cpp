@@ -51,15 +51,37 @@ Token Lexer::next() {
         this->src = std::make_shared<std::string>(stream.str());
     }
 
-    auto & input_text = std::get<std::shared_ptr<std::string>>(this->src);
+    const auto & input_text = std::get<std::shared_ptr<std::string>>(this->src);
 
-    const auto consume_whitespace = [&input_text, this] {
-        while (current_pos < input_text->size() and
-               (input_text->at(current_pos) == ' ' or input_text->at(current_pos) == '\t'))
-            current_pos++;
-    };
+    {
+        // The following two lambdas help preprocess the input
+        // by removing non-newline whitespace and comments.
+        // They are scoped to decrease name pollution and possibly help the compiler
+        // (mostly to help humans)
+        const auto consume_whitespace = [&input_text, this] {
+            const auto start = current_pos;
+            while (current_pos < input_text->size() and
+                   (input_text->at(current_pos) == ' ' or input_text->at(current_pos) == '\t'))
+                current_pos++;
 
-    consume_whitespace();
+            return start != current_pos;
+        };
+
+        const auto consume_comment = [&input_text, this] {
+            const auto start = current_pos;
+            if (current_pos < input_text->size() and input_text->at(current_pos) == '#') {
+                while (current_pos < input_text->size() and input_text->at(current_pos) != '\n')
+                    ++current_pos;
+
+                ++current_pos;
+            }
+            return start != current_pos;
+        };
+
+        while (consume_whitespace() or consume_comment())
+            ;
+    }
+
     if (current_pos >= input_text->size())
         return {input_text, input_text->size() - 1, 1, TokenType::EndOfFile};
 
