@@ -2,7 +2,7 @@
 // Created by nick on 4/6/20.
 //
 
-#include "parser.h"
+#include "lexer.h"
 #include <map>
 #include <sstream>
 
@@ -25,7 +25,7 @@ std::optional<TokenType> keyword(const std::string & identifier) {
     return {};
 }
 
-Token Parser::next() {
+Token Lexer::next() {
 
     // If we have a peeked value, we just return it
     if (peeked.has_value()) {
@@ -143,7 +143,7 @@ Token Parser::next() {
     }
 }
 
-Token Parser::peek() {
+Token Lexer::peek() {
 
     // If there is something peeked, we do not need to do any work.
 

@@ -2,8 +2,8 @@
 // Created by nick on 4/6/20.
 //
 
-#ifndef NEW_J_COMPILER_PARSER_H
-#define NEW_J_COMPILER_PARSER_H
+#ifndef NEW_J_COMPILER_LEXER_H
+#define NEW_J_COMPILER_LEXER_H
 
 #include <fstream>
 #include <memory>
@@ -13,11 +13,11 @@
 
 #include "token.h"
 
-class Parser final {
+class Lexer final {
     using src_impl = std::variant<std::string, std::shared_ptr<std::string>>;
 
   public:
-    explicit Parser(const std::string & filename) : src{filename} {}
+    explicit Lexer(const std::string & filename) : src{filename} {}
 
     [[nodiscard]] Token next();
 
@@ -32,4 +32,4 @@ class Parser final {
     std::optional<Token> peeked{};
 };
 
-#endif // NEW_J_COMPILER_PARSER_H
+#endif // NEW_J_COMPILER_LEXER_H
