@@ -19,8 +19,10 @@ class lexer final {
   public:
     explicit lexer(const std::string & filename) : src{filename} {}
 
+    // Consumes the next token, removing it from the input stream
     [[nodiscard]] token next();
 
+    // Generates the next token, but does not remove it from the input stream
     [[nodiscard]] token peek();
 
   private:
