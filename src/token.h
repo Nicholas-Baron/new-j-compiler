@@ -8,7 +8,7 @@
 #include <memory>
 #include <variant>
 
-enum struct TokenType {
+enum struct token_type {
     Assign,
     Colon,
     Const,
@@ -24,18 +24,19 @@ enum struct TokenType {
     Semi,
 };
 
-class Token final {
+class token final {
   public:
-    using token_data = std::variant<std::monostate, bool, long, float, std::string, TokenType>;
+    using token_data = std::variant<std::monostate, bool, long, float, std::string, token_type>;
 
-    Token(const std::shared_ptr<std::string> & text, size_t position, size_t length, TokenType type)
+    token(const std::shared_ptr<std::string> & text, size_t position, size_t length,
+          token_type type)
         : src_text{text}, pos{position}, len{length}, token_type{type} {}
 
     [[nodiscard]] token_data get_data() const {
         switch (const auto & text = src_text->substr(pos, len); token_type) {
-        case TokenType::Identifier:
+        case token_type::Identifier:
             return text;
-        case TokenType::Int:
+        case token_type::Int:
             if (len < 3)
                 return std::stol(text);
             else if (tolower(text[1]) == 'x')
@@ -49,14 +50,14 @@ class Token final {
         }
     }
 
-    [[nodiscard]] TokenType type() const noexcept { return token_type; }
+    [[nodiscard]] token_type type() const noexcept { return token_type; }
 
   private:
     std::shared_ptr<const std::string> src_text;
     size_t pos, len;
-    TokenType token_type;
+    token_type token_type;
 
-    friend std::ostream & operator<<(std::ostream & lhs, const Token & rhs) {
+    friend std::ostream & operator<<(std::ostream & lhs, const token & rhs) {
         return lhs << rhs.src_text->substr(rhs.pos, rhs.len);
     }
 };

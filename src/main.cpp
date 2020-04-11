@@ -18,9 +18,9 @@ int main(const int arg_count, const char ** args) {
     }
     std::cout << "File to read: " << user_args->input_filename << std::endl;
 
-    Lexer p{user_args->input_filename};
+    lexer p{user_args->input_filename};
 
-    while (p.peek().type() != TokenType::EndOfFile) {
+    while (p.peek().type() != token_type::EndOfFile) {
         std::cout << ' ' << p.next() << std::endl;
     }
 }

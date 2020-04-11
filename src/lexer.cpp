@@ -6,12 +6,12 @@
 #include <map>
 #include <sstream>
 
-std::optional<TokenType> keyword(const std::string & identifier) {
-    static std::map<std::string, TokenType> keywords;
+std::optional<token_type> keyword(const std::string & identifier) {
+    static std::map<std::string, token_type> keywords;
     if (keywords.empty()) {
-        keywords.emplace("int32", TokenType::Int32);
-        keywords.emplace("int64", TokenType::Int64);
-        keywords.emplace("const", TokenType::Const);
+        keywords.emplace("int32", token_type::Int32);
+        keywords.emplace("int64", token_type::Int64);
+        keywords.emplace("const", token_type::Const);
     }
 
     for (const auto & entry : keywords) {
@@ -25,7 +25,7 @@ std::optional<TokenType> keyword(const std::string & identifier) {
     return {};
 }
 
-Token Lexer::next() {
+token lexer::next() {
 
     // If we have a peeked value, we just return it
     if (peeked.has_value()) {
@@ -83,7 +83,7 @@ Token Lexer::next() {
     }
 
     if (current_pos >= input_text->size())
-        return {input_text, input_text->size() - 1, 1, TokenType::EndOfFile};
+        return {input_text, input_text->size() - 1, 1, token_type::EndOfFile};
 
     auto current_char = input_text->at(current_pos);
 
@@ -97,9 +97,9 @@ Token Lexer::next() {
         const auto length = current_pos - start;
 
         const auto tokentype =
-            keyword(input_text->substr(start, length)).value_or(TokenType::Identifier);
+            keyword(input_text->substr(start, length)).value_or(token_type::Identifier);
 
-        return Token{input_text, start, length, tokentype};
+        return token{input_text, start, length, tokentype};
 
     } else if (isdigit(current_char)) {
 
@@ -111,24 +111,24 @@ Token Lexer::next() {
                 while (isxdigit(input_text->at(current_pos)))
                     current_pos++;
 
-                return {input_text, start, current_pos - start, TokenType::Int};
+                return {input_text, start, current_pos - start, token_type::Int};
             } else if (tolower(current_char) == 'b') {
                 // Eat binary literal
                 current_pos++;
                 while (input_text->at(current_pos) == '0' or input_text->at(current_pos) == '1')
                     current_pos++;
 
-                return {input_text, start, current_pos - start, TokenType::Int};
+                return {input_text, start, current_pos - start, token_type::Int};
             } else if (current_char == '.') {
                 // Eat float literal
                 current_pos++;
                 while (isdigit(input_text->at(current_pos)))
                     current_pos++;
 
-                return {input_text, start, current_pos - start, TokenType::Float};
+                return {input_text, start, current_pos - start, token_type::Float};
             } else {
                 // Just 0
-                return {input_text, start, 1, TokenType::Int};
+                return {input_text, start, 1, token_type::Int};
             }
         } else {
             // Does not start on a zero
@@ -146,30 +146,30 @@ Token Lexer::next() {
             }
 
             return {input_text, start, current_pos - start,
-                    is_float ? TokenType::Float : TokenType::Int};
+                    is_float ? token_type::Float : token_type::Int};
         }
 
     } else {
         switch (current_char) {
         case ';':
-            return {input_text, start, 1, TokenType ::Semi};
+            return {input_text, start, 1, token_type ::Semi};
         case ':':
-            return {input_text, start, 1, TokenType ::Colon};
+            return {input_text, start, 1, token_type ::Colon};
         case '=':
-            return {input_text, start, 1, TokenType ::Assign};
+            return {input_text, start, 1, token_type ::Assign};
         case '\n':
-            return {input_text, start, 1, TokenType ::Newline};
+            return {input_text, start, 1, token_type ::Newline};
         case '(':
-            return {input_text, start, 1, TokenType ::LParen};
+            return {input_text, start, 1, token_type ::LParen};
         case ')':
-            return {input_text, start, 1, TokenType ::RParen};
+            return {input_text, start, 1, token_type ::RParen};
         default:
-            return {input_text, start, 1, TokenType ::EndOfFile};
+            return {input_text, start, 1, token_type ::EndOfFile};
         }
     }
 }
 
-Token Lexer::peek() {
+token lexer::peek() {
 
     // If there is nothing peeked, we need to read the next token.
     if (not peeked.has_value())

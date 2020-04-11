@@ -13,15 +13,15 @@
 
 #include "token.h"
 
-class Lexer final {
+class lexer final {
     using src_impl = std::variant<std::string, std::shared_ptr<std::string>>;
 
   public:
-    explicit Lexer(const std::string & filename) : src{filename} {}
+    explicit lexer(const std::string & filename) : src{filename} {}
 
-    [[nodiscard]] Token next();
+    [[nodiscard]] token next();
 
-    [[nodiscard]] Token peek();
+    [[nodiscard]] token peek();
 
   private:
     // Stores either the name of a file or the stream of that file
@@ -29,7 +29,7 @@ class Lexer final {
 
     size_t current_pos = 0;
 
-    std::optional<Token> peeked{};
+    std::optional<token> peeked{};
 };
 
 #endif // NEW_J_COMPILER_LEXER_H

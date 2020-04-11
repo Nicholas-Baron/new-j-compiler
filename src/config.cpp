@@ -2,10 +2,10 @@
 #include "config.h"
 #include <iostream>
 
-[[nodiscard]] std::shared_ptr<const UserSettings> parse_cmdline_args(int arg_count,
+[[nodiscard]] std::shared_ptr<const user_settings> parse_cmdline_args(int arg_count,
                                                                      const char ** args) {
 
-    UserSettings settings;
+    user_settings settings;
 
     for (auto i = 1; i < arg_count; i++) {
         if (std::string arg{args[i]}; arg == "--help" or arg == "-h") {
@@ -17,5 +17,5 @@
         }
     }
 
-    return std::make_shared<const UserSettings>(std::move(settings));
+    return std::make_shared<const user_settings>(std::move(settings));
 }
