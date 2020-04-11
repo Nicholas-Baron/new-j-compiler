@@ -21,6 +21,6 @@ int main(const int arg_count, const char ** args) {
     lexer p{user_args->input_filename};
 
     while (p.peek().type() != token_type::EndOfFile) {
-        std::cout << ' ' << p.next() << std::endl;
+        std::cout << p.next() << std::endl;
     }
 }
