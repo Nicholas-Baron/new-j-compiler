@@ -30,10 +30,10 @@ class token final {
 
     token(const std::shared_ptr<std::string> & text, size_t position, size_t length,
           token_type type)
-        : src_text{text}, pos{position}, len{length}, token_type{type} {}
+        : src_text{text}, pos{position}, len{length}, tok_type{type} {}
 
     [[nodiscard]] token_data get_data() const {
-        switch (const auto & text = src_text->substr(pos, len); token_type) {
+        switch (const auto & text = src_text->substr(pos, len); tok_type) {
         case token_type::Identifier:
             return text;
         case token_type::Int:
@@ -46,16 +46,16 @@ class token final {
             else
                 return std::stol(text, nullptr, 10);
         default:
-            return token_type;
+            return tok_type;
         }
     }
 
-    [[nodiscard]] token_type type() const noexcept { return token_type; }
+    [[nodiscard]] token_type type() const noexcept { return tok_type; }
 
   private:
     std::shared_ptr<const std::string> src_text;
     size_t pos, len;
-    token_type token_type;
+    token_type tok_type;
 
     friend std::ostream & operator<<(std::ostream & lhs, const token & rhs) {
         return lhs << rhs.src_text->substr(rhs.pos, rhs.len);
