@@ -11,7 +11,7 @@ class visitor {
   public:
     virtual ~visitor() noexcept = default;
 
-    virtual visit(ast::node &) {}
+    virtual void visit(ast::node &) {}
 };
 
 #endif // NEW_J_COMPILER_VISITOR_H

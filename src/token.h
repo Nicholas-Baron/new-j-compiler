@@ -22,6 +22,9 @@ enum struct token_type {
     Newline,
     RParen,
     Semi,
+    Func,
+    Struct,
+    Comma,
 };
 
 class token final {
@@ -53,6 +56,7 @@ class token final {
     [[nodiscard]] token_type type() const noexcept { return tok_type; }
     [[nodiscard]] auto start() const noexcept { return pos; }
     [[nodiscard]] auto end() const noexcept { return pos + len; }
+    [[nodiscard]] auto src() const noexcept { return src_text; }
 
   private:
     std::shared_ptr<const std::string> src_text;

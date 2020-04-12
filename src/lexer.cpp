@@ -12,6 +12,7 @@ std::optional<token_type> keyword(const std::string & identifier) {
         keywords.emplace("int32", token_type::Int32);
         keywords.emplace("int64", token_type::Int64);
         keywords.emplace("const", token_type::Const);
+        keywords.emplace("func", token_type::Func);
     }
 
     for (const auto & entry : keywords) {

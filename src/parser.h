@@ -7,6 +7,7 @@
 
 #include "lexer.h"
 #include "node_forward.h"
+#include "nodes.h"
 
 class parser final {
   public:
@@ -20,6 +21,11 @@ class parser final {
     
     bool match_expr();
     bool match_stmt();
+    
+    std::unique_ptr<ast::top_level> parse_top_level();
+    std::unique_ptr<ast::function> parse_function();
+    std::vector<ast::parameter> parse_params();
+    std::unique_ptr<ast::statement> parse_statement();
     
     lexer lex;
 };

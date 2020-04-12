@@ -6,28 +6,82 @@
 #define NEW_J_COMPILER_NODES_H
 
 #include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #include "node_forward.h"
+#include "token.h"
 #include "visitor.h"
 
 namespace ast {
 
-class node {
+class program {
   public:
-    node(std::shared_ptr<const std::string> text, size_t position, size_t end_pos)
-        : src_text{std::move(text)}, start{position}, end{end_pos} {}
-
-    virtual ~node() noexcept = default;
-    virtual void accept(visitor &) {}
-
-    // Functions to help with debug printing
-    [[nodiscard]] auto start_pos() const noexcept { return start; }
-    [[nodiscard]] auto end_pos() const noexcept { return end; }
-    [[nodiscard]] auto text() const noexcept { return src_text->substr(start, end - start); }
+    bool add_item(std::unique_ptr<top_level> item);
+    top_level * find(const std::string & id) const;
 
   private:
-    std::shared_ptr<const std::string> src_text;
-    size_t start, end;
+    std::vector<std::unique_ptr<top_level>> items{};
+};
+
+class node {
+  public:
+    virtual ~node() noexcept = default;
+    virtual void accept(visitor &) {}
+    [[nodiscard]] virtual ast::node_type type() const noexcept { return node_type::node; }
+
+    // Functions to help with debug printing
+    [[nodiscard]] virtual size_t start_pos() const noexcept = 0;
+    [[nodiscard]] virtual size_t end_pos() const noexcept = 0;
+    [[nodiscard]] virtual std::string text() const noexcept = 0;
+};
+
+// Intermediate classes
+class expression : public ast::node {};
+class statement : public ast::node {};
+class top_level : public ast::node {
+  public:
+    [[nodiscard]] virtual const std::string & identifier() const = 0;
+};
+
+// Top level items
+class function final : public ast::top_level {
+  public:
+    function(token && name, std::vector<parameter> params, std::optional<token> && return_type,
+             std::unique_ptr<ast::statement> body)
+        : name{std::move(name)}, ret_type{std::move(return_type)}, params{std::move(params)},
+          body{std::move(body)} {}
+
+    [[nodiscard]] const std::string & identifier() const final {
+        return std::get<std::string>(name.get_data());
+    }
+
+    [[nodiscard]] size_t start_pos() const noexcept final { return name.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return body->end_pos(); }
+    [[nodiscard]] std::string text() const noexcept final {
+        return name.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token name;
+    std::optional<token> ret_type;
+    std::vector<ast::parameter> params;
+    std::unique_ptr<ast::statement> body;
+};
+
+class parameter final : public ast::node {
+  public:
+    parameter(token && name, token && type) : name{std::move(name)}, type{std::move(type)} {}
+
+    [[nodiscard]] size_t start_pos() const noexcept final { return name.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return type.end(); }
+    [[nodiscard]] std::string text() const noexcept final {
+        return name.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token name, type;
 };
 
 } // namespace ast
