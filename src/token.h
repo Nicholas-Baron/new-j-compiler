@@ -51,6 +51,8 @@ class token final {
     }
 
     [[nodiscard]] token_type type() const noexcept { return tok_type; }
+    [[nodiscard]] auto start() const noexcept { return pos; }
+    [[nodiscard]] auto end() const noexcept { return pos + len; }
 
   private:
     std::shared_ptr<const std::string> src_text;
