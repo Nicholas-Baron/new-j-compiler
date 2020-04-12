@@ -5,7 +5,6 @@
 #ifndef NEW_J_COMPILER_LEXER_H
 #define NEW_J_COMPILER_LEXER_H
 
-#include <fstream>
 #include <memory>
 #include <optional>
 #include <string>
