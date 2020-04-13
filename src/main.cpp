@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "lexer.h"
+#include "parser.h"
 
 int main(const int arg_count, const char ** args) {
     const auto user_args = parse_cmdline_args(arg_count, args);
@@ -18,9 +19,11 @@ int main(const int arg_count, const char ** args) {
     }
     std::cout << "File to read: " << user_args->input_filename << std::endl;
 
-    lexer p{user_args->input_filename};
+    parser p{lexer{user_args->input_filename}};
 
-    while (p.peek().type() != token_type::EndOfFile) {
-        std::cout << p.next() << std::endl;
-    }
+    auto program = p.parse_program();
+    if (program != nullptr)
+        std::cout << "Success\n";
+    else
+        std::cout << "Failed\n";
 }
