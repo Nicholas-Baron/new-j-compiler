@@ -21,6 +21,10 @@ std::unique_ptr<ast::program> parser::parse_program() {
     return std::make_unique<ast::program>(std::move(prog));
 }
 std::unique_ptr<ast::top_level> parser::parse_top_level() {
+
+    while (lex.peek().type() == token_type::Semi or lex.peek().type() == token_type::Newline)
+        consume();
+
     switch (auto next_token_type = lex.peek().type(); next_token_type) {
     case token_type ::Func:
         return this->parse_function();
