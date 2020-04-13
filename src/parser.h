@@ -30,6 +30,7 @@ class parser final {
     std::vector<ast::parameter> parse_params();
 
     std::unique_ptr<ast::const_decl> parse_const_decl();
+    ast::opt_typed parse_opt_typed();
 
     // Statements
     std::unique_ptr<ast::statement> parse_statement();

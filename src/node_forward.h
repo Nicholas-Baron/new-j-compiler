@@ -17,6 +17,7 @@ enum struct node_type {
     parameter_list,
     statement_block,
     value,
+    opt_typed,
 };
 
 // Not part of the AST, just a container for it
@@ -24,6 +25,9 @@ class program;
 
 // Base class
 class node;
+
+// AST helpers
+class opt_typed;
 
 // Intermediate classes
 class statement;

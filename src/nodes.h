@@ -42,7 +42,30 @@ class expression : public ast::node {};
 class statement : public ast::node {};
 class top_level : public ast::node {
   public:
-    [[nodiscard]] virtual const std::string & identifier() const = 0;
+    [[nodiscard]] virtual std::string identifier() const = 0;
+};
+
+class opt_typed final : public ast::node {
+  public:
+    explicit opt_typed(token && identifier, std::optional<token> && type = {})
+        : ident{std::move(identifier)}, written_type{std::move(type)} {}
+
+    [[nodiscard]] std::string name() const { return std::get<std::string>(ident.get_data()); }
+    [[nodiscard]] auto src() const { return ident.src(); }
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::opt_typed; }
+
+    [[nodiscard]] size_t start_pos() const noexcept final { return ident.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final {
+        return written_type.has_value() ? written_type.value().end() : ident.end();
+    }
+    [[nodiscard]] std::string text() const noexcept final {
+        return ident.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token ident;
+    std::optional<token> written_type;
 };
 
 // Top level items
@@ -51,7 +74,7 @@ class parameter final : public ast::node {
   public:
     parameter(token && name, token && type) : name{std::move(name)}, val_type{std::move(type)} {}
 
-    [[nodiscard]] virtual ast::node_type type() const noexcept { return node_type ::parameter; }
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::parameter; }
 
     [[nodiscard]] size_t start_pos() const noexcept final { return name.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val_type.end(); }
@@ -67,30 +90,27 @@ class function final : public ast::top_level {
   public:
     function(token && name, std::vector<parameter> params, std::optional<token> && return_type,
              std::unique_ptr<ast::statement> body)
-        : name{std::move(name)}, ret_type{std::move(return_type)}, params{std::move(params)},
-          body{std::move(body)} {}
+        : name{std::move(name), std::move(return_type)}, params{std::move(params)}, body{std::move(
+                                                                                        body)} {}
 
     void accept(visitor & v) final {
-        v.visit(*this);
+        v.visit(name);
         for (auto & param : params)
             v.visit(param);
         v.visit(*body);
     }
 
-    [[nodiscard]] const std::string & identifier() const final {
-        return std::get<std::string>(name.get_data());
-    }
+    [[nodiscard]] std::string identifier() const final { return name.name(); }
 
     [[nodiscard]] node_type type() const noexcept final { return node_type ::function; }
-    [[nodiscard]] size_t start_pos() const noexcept final { return name.start(); }
+    [[nodiscard]] size_t start_pos() const noexcept final { return name.start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return body->end_pos(); }
     [[nodiscard]] std::string text() const noexcept final {
         return name.src()->substr(start_pos(), end_pos() - start_pos());
     }
 
   private:
-    token name;
-    std::optional<token> ret_type;
+    opt_typed name;
     std::vector<ast::parameter> params;
     std::unique_ptr<ast::statement> body;
 };
@@ -146,10 +166,10 @@ class func_call final : public ast::statement, public ast::expression {
 
 class const_decl final : public ast::top_level, public ast::statement {
   public:
-    const_decl(token && name, std::unique_ptr<expression> expr, bool is_global)
-        : ident{std::move(name)}, val{std::move(expr)}, global{is_global} {}
+    const_decl(opt_typed && ident, std::unique_ptr<expression> expr, bool is_global)
+        : name{std::move(ident)}, val{std::move(expr)}, global{is_global} {}
 
-    void visit(visitor & v) {
+    void accept(visitor & v) final {
         if (global)
             v.visit(*static_cast<ast::top_level *>(this));
         else
@@ -158,19 +178,17 @@ class const_decl final : public ast::top_level, public ast::statement {
         v.visit(*val);
     }
 
-    [[nodiscard]] const std::string & identifier() const final {
-        return std::get<std::string>(ident.get_data());
-    }
+    [[nodiscard]] std::string identifier() const final { return name.name(); }
 
     [[nodiscard]] node_type type() const noexcept final { return node_type ::function; }
-    [[nodiscard]] size_t start_pos() const noexcept final { return ident.start(); }
+    [[nodiscard]] size_t start_pos() const noexcept final { return name.start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val->end_pos(); }
     [[nodiscard]] std::string text() const noexcept final {
-        return ident.src()->substr(start_pos(), end_pos() - start_pos());
+        return name.src()->substr(start_pos(), end_pos() - start_pos());
     }
 
   private:
-    token ident;
+    opt_typed name;
     std::unique_ptr<expression> val;
     bool global;
 };

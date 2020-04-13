@@ -222,7 +222,7 @@ std::unique_ptr<ast::const_decl> parser::parse_const_decl() {
         return nullptr;
     }
 
-    auto ident = consume();
+    auto ident = parse_opt_typed();
 
     if (consume().type() != token_type::Assign) {
         std::cerr << "Declarations must use '='\n";
@@ -230,4 +230,12 @@ std::unique_ptr<ast::const_decl> parser::parse_const_decl() {
     }
 
     return std::make_unique<ast::const_decl>(std::move(ident), parse_expression(0), true);
+}
+ast::opt_typed parser::parse_opt_typed() {
+    auto ident = consume();
+    if (lex.peek().type() == token_type::Colon) {
+        consume();
+        return ast::opt_typed{std::move(ident), consume()};
+    }
+    return ast::opt_typed{std::move(ident)};
 }
