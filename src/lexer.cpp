@@ -153,6 +153,20 @@ token lexer::next() {
                     is_float ? token_type::Float : token_type::Int};
         }
 
+    } else if (current_char == '"') {
+        // Read in string literal
+        char last_char = '"';
+        bool done = false;
+        while (not done) {
+            while (input_text->size() < current_pos and input_text->at(current_pos) != '"') {
+                last_char = input_text->at(current_pos);
+                current_pos++;
+            }
+            if (last_char != '\\')
+                done = true;
+        }
+        current_pos++;
+        return {input_text, start, current_pos - start, token_type ::StringLiteral};
     } else {
         switch (current_char) {
         case ';':

@@ -27,6 +27,7 @@ enum struct token_type {
     Comma,
     LBrace,
     RBrace,
+    StringLiteral,
 };
 
 class token final {
