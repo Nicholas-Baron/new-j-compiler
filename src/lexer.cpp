@@ -167,6 +167,12 @@ token lexer::next() {
             return {input_text, start, 1, token_type ::LParen};
         case ')':
             return {input_text, start, 1, token_type ::RParen};
+        case '{':
+            return {input_text, start, 1, token_type ::LBrace};
+        case '}':
+            return {input_text, start, 1, token_type ::RBrace};
+        case ',':
+            return {input_text, start, 1, token_type ::Comma};
         default:
             return {input_text, start, 1, token_type ::EndOfFile};
         }
