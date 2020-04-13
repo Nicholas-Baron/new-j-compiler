@@ -158,14 +158,15 @@ token lexer::next() {
         char last_char = '"';
         bool done = false;
         while (not done) {
-            while (input_text->size() < current_pos and input_text->at(current_pos) != '"') {
+            while (current_pos < input_text->size() and input_text->at(current_pos) != '"') {
                 last_char = input_text->at(current_pos);
                 current_pos++;
             }
-            if (last_char != '\\')
+            if (last_char != '\\') {
+                current_pos++;
                 done = true;
+            }
         }
-        current_pos++;
         return {input_text, start, current_pos - start, token_type ::StringLiteral};
     } else {
         switch (current_char) {

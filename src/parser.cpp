@@ -22,9 +22,6 @@ std::unique_ptr<ast::program> parser::parse_program() {
 }
 std::unique_ptr<ast::top_level> parser::parse_top_level() {
 
-    while (lex.peek().type() == token_type::Semi or lex.peek().type() == token_type::Newline)
-        consume();
-
     switch (auto next_token_type = lex.peek().type(); next_token_type) {
     case token_type ::Func:
         return this->parse_function();
@@ -72,7 +69,12 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
     }
 }
 
-bool parser::done() { return this->lex.peek().type() == token_type::EndOfFile; }
+bool parser::done() {
+    while (lex.peek().type() == token_type::Newline or lex.peek().type() == token_type::Semi)
+        consume();
+
+    return this->lex.peek().type() == token_type::EndOfFile;
+}
 
 token parser::consume() { return this->lex.next(); }
 
@@ -144,11 +146,16 @@ std::vector<std::unique_ptr<ast::expression>> parser::parse_arguments() {
 
     consume();
     std::vector<std::unique_ptr<ast::expression>> args;
-    while (lex.peek().type() != token_type::RParen) {
+    if (lex.peek().type() != token_type::RParen) {
         args.push_back(parse_expression(0));
-        if (consume().type() != token_type::Comma) {
-            std::cerr << "Expected comma to separate expressions in argument list\n";
+        while (lex.peek().type() == token_type::Comma) {
+            consume();
+            args.push_back(parse_expression(0));
         }
+        // Should be RParen
+        if (auto tok = consume(); tok.type() != token_type::RParen)
+            std::cerr << "Expected closing parenthesis for argument list. Got " << tok
+                      << " instead\n";
     }
 
     return args;
@@ -197,6 +204,7 @@ std::unique_ptr<ast::expression> parser::parse_primary_expr() {
     case token_type ::Identifier:
     case token_type ::Int:
     case token_type ::Float:
+    case token_type ::StringLiteral:
         return std::make_unique<ast::value>(consume());
     default:
         std::cerr << "Unexpected token as primary expression " << consume() << '\n';
