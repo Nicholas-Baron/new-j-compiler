@@ -95,6 +95,71 @@ class function final : public ast::top_level {
     std::unique_ptr<ast::statement> body;
 };
 
+// Statements
+
+class stmt_block final : public ast::statement {
+  public:
+    explicit stmt_block(token && start) : start{std::move(start)} {}
+
+    void append(std::unique_ptr<ast::statement> stmt) { stmts.push_back(std::move(stmt)); }
+    void terminate(token && ender) { end = ender; }
+
+    void accept(visitor & v) final {
+        for (auto & stmt : stmts)
+            v.visit(*stmt);
+    }
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::statement_block; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return start.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final {
+        return end.has_value() ? end->end()
+                               : (stmts.empty() ? start.end() : stmts.back()->end_pos());
+    }
+    [[nodiscard]] std::string text() const noexcept final {
+        return start.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token start;
+    std::vector<std::unique_ptr<ast::statement>> stmts;
+    std::optional<token> end;
+};
+
+class func_call final : public ast::statement, public ast::expression {
+  public:
+    func_call(token && callee, std::vector<std::unique_ptr<ast::expression>> && args)
+        : func_name{std::move(callee)}, arguments{std::move(args)} {}
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::func_call; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return func_name.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final {
+        return arguments.empty() ? func_name.end() : arguments.back()->end_pos();
+    }
+    [[nodiscard]] std::string text() const noexcept final {
+        return func_name.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token func_name;
+    std::vector<std::unique_ptr<ast::expression>> arguments;
+};
+
+// Expressions
+class value final : public ast::expression {
+  public:
+    explicit value(token && val) : val{std::move(val)} {}
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::value; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return val.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return val.end(); }
+    [[nodiscard]] std::string text() const noexcept final {
+        return val.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token val;
+};
+
 } // namespace ast
 
 #endif // NEW_J_COMPILER_NODES_H

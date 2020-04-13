@@ -17,6 +17,7 @@ enum struct node_type {
     parameter,
     parameter_list,
     statement_block,
+    value,
 };
 
 // Not part of the AST, just a container for it
