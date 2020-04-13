@@ -24,9 +24,12 @@ class parser final {
     bool match_expr();
     bool match_stmt();
 
+    // Top level items
     std::unique_ptr<ast::top_level> parse_top_level();
     std::unique_ptr<ast::function> parse_function();
     std::vector<ast::parameter> parse_params();
+
+    std::unique_ptr<ast::const_decl> parse_const_decl();
 
     // Statements
     std::unique_ptr<ast::statement> parse_statement();

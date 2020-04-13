@@ -144,6 +144,37 @@ class func_call final : public ast::statement, public ast::expression {
     std::vector<std::unique_ptr<ast::expression>> arguments;
 };
 
+class const_decl final : public ast::top_level, public ast::statement {
+  public:
+    const_decl(token && name, std::unique_ptr<expression> expr, bool is_global)
+        : ident{std::move(name)}, val{std::move(expr)}, global{is_global} {}
+
+    void visit(visitor & v) {
+        if (global)
+            v.visit(*static_cast<ast::top_level *>(this));
+        else
+            v.visit(*static_cast<ast::statement *>(this));
+
+        v.visit(*val);
+    }
+
+    [[nodiscard]] const std::string & identifier() const final {
+        return std::get<std::string>(ident.get_data());
+    }
+
+    [[nodiscard]] node_type type() const noexcept final { return node_type ::function; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return ident.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return val->end_pos(); }
+    [[nodiscard]] std::string text() const noexcept final {
+        return ident.src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+  private:
+    token ident;
+    std::unique_ptr<expression> val;
+    bool global;
+};
+
 // Expressions
 class value final : public ast::expression {
   public:

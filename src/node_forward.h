@@ -9,7 +9,6 @@ namespace ast {
 
 // All node types
 enum struct node_type {
-    argument,
     const_decl,
     func_call,
     function,
@@ -34,6 +33,10 @@ class top_level;
 // function related
 class function;
 class parameter;
+
+// value declarations
+class const_decl;
+class let_decl;
 
 } // namespace ast
 

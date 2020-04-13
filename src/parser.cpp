@@ -25,7 +25,7 @@ std::unique_ptr<ast::top_level> parser::parse_top_level() {
     case token_type ::Func:
         return this->parse_function();
     case token_type ::Const:
-        // return this->parse_const_decl();
+        return this->parse_const_decl();
     case token_type ::Struct:
         // return this->parse_struct_decl();
     default:
@@ -215,4 +215,19 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
         std::cerr << "Unexpected token in secondary expression " << lex.peek() << '\n';
         return lhs;
     }
+}
+std::unique_ptr<ast::const_decl> parser::parse_const_decl() {
+    if (consume().type() != token_type::Const) {
+        std::cerr << "A const declaration can only start with const\n";
+        return nullptr;
+    }
+
+    auto ident = consume();
+
+    if (consume().type() != token_type::Assign) {
+        std::cerr << "Declarations must use '='\n";
+        return nullptr;
+    }
+
+    return std::make_unique<ast::const_decl>(std::move(ident), parse_expression(0), true);
 }
