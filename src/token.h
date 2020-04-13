@@ -25,6 +25,8 @@ enum struct token_type {
     Func,
     Struct,
     Comma,
+    LBrace,
+    RBrace,
 };
 
 class token final {
