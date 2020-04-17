@@ -77,6 +77,8 @@ class opt_typed final : public ast::node {
         return ident.src()->substr(start_pos(), end_pos() - start_pos());
     }
 
+    [[nodiscard]] auto user_typed() const noexcept { return written_type.has_value(); }
+
   private:
     token ident;
     std::optional<token> written_type;
@@ -162,6 +164,10 @@ class func_call final : public ast::statement, public ast::expression {
     func_call(token && callee, std::vector<std::unique_ptr<ast::expression>> && args)
         : func_name{std::move(callee)}, arguments{std::move(args)} {}
 
+    void accept(visitor & v) final {
+        for (auto & arg : arguments) v.visit(*arg);
+    }
+
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::func_call; }
     [[nodiscard]] size_t start_pos() const noexcept final { return func_name.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final {
@@ -181,13 +187,7 @@ class const_decl final : public ast::top_level, public ast::statement {
     const_decl(opt_typed && ident, std::unique_ptr<expression> expr, bool is_global)
         : name{std::move(ident)}, val{std::move(expr)}, global{is_global} {}
 
-    void accept(visitor & v) final {
-        if (global) v.visit(*static_cast<ast::top_level *>(this));
-        else
-            v.visit(*static_cast<ast::statement *>(this));
-
-        v.visit(*val);
-    }
+    void accept(visitor & v) final { v.visit(*val); }
 
     [[nodiscard]] std::string identifier() const final { return name.name(); }
 
@@ -197,6 +197,8 @@ class const_decl final : public ast::top_level, public ast::statement {
     [[nodiscard]] std::string text() const noexcept final {
         return name.src()->substr(start_pos(), end_pos() - start_pos());
     }
+
+    [[nodiscard]] bool in_global_scope() const noexcept { return global; }
 
   private:
     opt_typed name;

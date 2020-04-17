@@ -31,6 +31,8 @@ class printing_visitor final : public visitor {
     [[nodiscard]] constexpr auto visited_count() const noexcept { return node_count; }
 
   private:
+    void print_indent() const;
+
     int indent_size;
     int indent_depth = 0;
     long node_count = 0;
