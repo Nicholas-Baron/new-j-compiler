@@ -3,7 +3,9 @@
 //
 
 #include "parser.h"
+
 #include "nodes.h"
+
 #include <iostream>
 
 std::unique_ptr<ast::program> parser::parse_program() {
@@ -11,8 +13,7 @@ std::unique_ptr<ast::program> parser::parse_program() {
     ast::program prog{};
     while (not done()) {
         auto next_item = parse_top_level();
-        if (next_item == nullptr)
-            std::cerr << "Could not parse top level item\n";
+        if (next_item == nullptr) std::cerr << "Could not parse top level item\n";
         else if (not prog.find(next_item->identifier()))
             prog.add_item(std::move(next_item));
         else
@@ -43,9 +44,7 @@ std::unique_ptr<ast::function> parser::parse_function() {
 
     // Generate parameter list
     std::vector<ast::parameter> params;
-    if (lex.peek().type() == token_type::LParen) {
-        params = parse_params();
-    }
+    if (lex.peek().type() == token_type::LParen) { params = parse_params(); }
 
     std::optional<token> return_type;
     if (lex.peek().type() == token_type::Colon) {
@@ -93,8 +92,7 @@ std::vector<ast::parameter> parser::parse_params() {
         auto type = consume();
         params.emplace_back(std::move(name), std::move(type));
 
-        if (lex.peek().type() == token_type::RParen)
-            break;
+        if (lex.peek().type() == token_type::RParen) break;
         else if (lex.peek().type() == token_type::Comma)
             consume();
         else {
@@ -113,9 +111,7 @@ std::unique_ptr<ast::stmt_block> parser::parse_stmt_block() {
     }
 
     ast::stmt_block block{consume()};
-    while (lex.peek().type() != token_type::RBrace) {
-        block.append(parse_statement());
-    }
+    while (lex.peek().type() != token_type::RBrace) { block.append(parse_statement()); }
 
     // Will be a RBrace
     block.terminate(consume());
@@ -126,8 +122,7 @@ std::unique_ptr<ast::stmt_block> parser::parse_stmt_block() {
 std::unique_ptr<ast::statement> parser::parse_identifier_stmt() {
     auto identifier = consume();
 
-    if (lex.peek().type() == token_type::LParen)
-        return parse_call_stmt(std::move(identifier));
+    if (lex.peek().type() == token_type::LParen) return parse_call_stmt(std::move(identifier));
     else {
         std::cerr << "Unexpected token after identifier " << lex.peek();
         return nullptr;
@@ -188,8 +183,7 @@ std::unique_ptr<ast::expression> parser::parse_expression(int min_preced, associ
     auto expr = parse_primary_expr();
     while (match_secondary_expr()) {
         auto precedence = op_precedence(lex.peek());
-        if (precedence < min_preced)
-            break;
+        if (precedence < min_preced) break;
         else if (precedence == min_preced and assoc == associativity::left)
             break;
 

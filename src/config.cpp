@@ -1,9 +1,10 @@
 
 #include "config.h"
+
 #include <iostream>
 
 [[nodiscard]] std::shared_ptr<const user_settings> parse_cmdline_args(int arg_count,
-                                                                     const char ** args) {
+                                                                      const char ** args) {
 
     user_settings settings;
 

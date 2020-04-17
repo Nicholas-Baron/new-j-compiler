@@ -43,8 +43,7 @@ class token final {
         case token_type::Identifier:
             return text;
         case token_type::Int:
-            if (len < 3)
-                return std::stol(text);
+            if (len < 3) return std::stol(text);
             else if (tolower(text[1]) == 'x')
                 return std::stol(text, nullptr, 16);
             else if (tolower(text[1]) == 'b')

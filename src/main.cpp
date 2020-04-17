@@ -1,10 +1,10 @@
 
-#include <iostream>
-
 #include "config.h"
 #include "lexer.h"
 #include "parser.h"
 #include "visitor.h"
+
+#include <iostream>
 
 int main(const int arg_count, const char ** args) {
     const auto user_args = parse_cmdline_args(arg_count, args);
@@ -23,8 +23,7 @@ int main(const int arg_count, const char ** args) {
     parser p{lexer{user_args->input_filename}};
 
     auto program = p.parse_program();
-    if (program == nullptr)
-        std::cout << "Failed\n";
+    if (program == nullptr) std::cout << "Failed\n";
     else {
         std::cout << "Success\n";
 

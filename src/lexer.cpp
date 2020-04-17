@@ -47,8 +47,7 @@ token lexer::next() {
         {
             std::ifstream file{filename};
             std::string temp;
-            while (std::getline(file, temp))
-                stream << temp << '\n';
+            while (std::getline(file, temp)) stream << temp << '\n';
         }
 
         // Store the data
@@ -64,8 +63,8 @@ token lexer::next() {
         // (mostly to help humans)
         const auto consume_whitespace = [&input_text, this] {
             const auto start = current_pos;
-            while (current_pos < input_text->size() and
-                   (input_text->at(current_pos) == ' ' or input_text->at(current_pos) == '\t'))
+            while (current_pos < input_text->size()
+                   and (input_text->at(current_pos) == ' ' or input_text->at(current_pos) == '\t'))
                 current_pos++;
 
             return start != current_pos;
@@ -95,13 +94,12 @@ token lexer::next() {
     current_pos++;
 
     if (isalpha(current_char)) {
-        while (isalnum(input_text->at(current_pos)))
-            current_pos++;
+        while (isalnum(input_text->at(current_pos))) current_pos++;
 
         const auto length = current_pos - start;
 
-        const auto tokentype =
-            keyword(input_text->substr(start, length)).value_or(token_type::Identifier);
+        const auto tokentype
+            = keyword(input_text->substr(start, length)).value_or(token_type::Identifier);
 
         return token{input_text, start, length, tokentype};
 
@@ -112,8 +110,7 @@ token lexer::next() {
             if (tolower(current_char) == 'x') {
                 // Eat hexadecimal literal
                 current_pos++;
-                while (isxdigit(input_text->at(current_pos)))
-                    current_pos++;
+                while (isxdigit(input_text->at(current_pos))) current_pos++;
 
                 return {input_text, start, current_pos - start, token_type::Int};
             } else if (tolower(current_char) == 'b') {
@@ -126,8 +123,7 @@ token lexer::next() {
             } else if (current_char == '.') {
                 // Eat float literal
                 current_pos++;
-                while (isdigit(input_text->at(current_pos)))
-                    current_pos++;
+                while (isdigit(input_text->at(current_pos))) current_pos++;
 
                 return {input_text, start, current_pos - start, token_type::Float};
             } else {
@@ -136,8 +132,7 @@ token lexer::next() {
             }
         } else {
             // Does not start on a zero
-            while (isdigit(input_text->at(current_pos)))
-                current_pos++;
+            while (isdigit(input_text->at(current_pos))) current_pos++;
 
             bool is_float = false;
             if (input_text->at(current_pos) == '.') {
@@ -145,8 +140,7 @@ token lexer::next() {
                 current_pos++;
 
                 // TODO: Remove trailing zeros
-                while (isdigit(input_text->at(current_pos)))
-                    current_pos++;
+                while (isdigit(input_text->at(current_pos))) current_pos++;
             }
 
             return {input_text, start, current_pos - start,
@@ -197,8 +191,7 @@ token lexer::next() {
 token lexer::peek() {
 
     // If there is nothing peeked, we need to read the next token.
-    if (not peeked.has_value())
-        peeked = this->next();
+    if (not peeked.has_value()) peeked = this->next();
 
     return peeked.value();
 }

@@ -3,6 +3,7 @@
 //
 
 #include "nodes.h"
+
 #include <algorithm>
 
 namespace ast {

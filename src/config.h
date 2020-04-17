@@ -11,6 +11,6 @@ struct user_settings {
 };
 
 [[nodiscard]] std::shared_ptr<const user_settings> parse_cmdline_args(int arg_count,
-                                                                     const char ** args);
+                                                                      const char ** args);
 
 #endif

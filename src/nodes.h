@@ -5,15 +5,15 @@
 #ifndef NEW_J_COMPILER_NODES_H
 #define NEW_J_COMPILER_NODES_H
 
+#include "node_forward.h"
+#include "token.h"
+#include "visitor.h"
+
 #include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
-
-#include "node_forward.h"
-#include "token.h"
-#include "visitor.h"
 
 namespace ast {
 
@@ -23,8 +23,7 @@ class program {
     [[nodiscard]] top_level * find(const std::string & id) const;
 
     void visit(const std::function<void(top_level &)> & visitor) {
-        for (auto & item : items)
-            visitor(*item);
+        for (auto & item : items) visitor(*item);
     }
 
   private:
@@ -110,8 +109,7 @@ class function final : public ast::top_level {
 
     void accept(visitor & v) final {
         v.visit(name);
-        for (auto & param : params)
-            v.visit(param);
+        for (auto & param : params) v.visit(param);
         v.visit(*body);
     }
 
@@ -140,8 +138,7 @@ class stmt_block final : public ast::statement {
     void terminate(token && ender) { end = ender; }
 
     void accept(visitor & v) final {
-        for (auto & stmt : stmts)
-            v.visit(*stmt);
+        for (auto & stmt : stmts) v.visit(*stmt);
     }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::statement_block; }
@@ -185,8 +182,7 @@ class const_decl final : public ast::top_level, public ast::statement {
         : name{std::move(ident)}, val{std::move(expr)}, global{is_global} {}
 
     void accept(visitor & v) final {
-        if (global)
-            v.visit(*static_cast<ast::top_level *>(this));
+        if (global) v.visit(*static_cast<ast::top_level *>(this));
         else
             v.visit(*static_cast<ast::statement *>(this));
 
