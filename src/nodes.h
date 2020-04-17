@@ -17,7 +17,7 @@
 
 namespace ast {
 
-class program {
+class program final {
   public:
     bool add_item(std::unique_ptr<top_level> item);
     [[nodiscard]] top_level * find(const std::string & id) const;

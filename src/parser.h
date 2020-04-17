@@ -9,6 +9,8 @@
 #include "node_forward.h"
 #include "nodes.h"
 
+#include <vector>
+
 enum struct associativity { left, right };
 
 class parser final {

@@ -21,7 +21,7 @@ add_executable(new_jc
         src/config.cpp
         src/lexer.cpp
         src/parser.cpp
-        src/nodes.cpp
+        src/program.cpp
         src/visitor.cpp
         )
 
