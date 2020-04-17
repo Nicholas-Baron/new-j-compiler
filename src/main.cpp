@@ -4,6 +4,7 @@
 #include "config.h"
 #include "lexer.h"
 #include "parser.h"
+#include "visitor.h"
 
 int main(const int arg_count, const char ** args) {
     const auto user_args = parse_cmdline_args(arg_count, args);
@@ -22,8 +23,12 @@ int main(const int arg_count, const char ** args) {
     parser p{lexer{user_args->input_filename}};
 
     auto program = p.parse_program();
-    if (program != nullptr)
-        std::cout << "Success\n";
-    else
+    if (program == nullptr)
         std::cout << "Failed\n";
+    else {
+        std::cout << "Success\n";
+
+        printing_visitor pv{};
+        program->visit([&](auto & node) { pv.visit(node); });
+    }
 }

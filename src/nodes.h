@@ -5,6 +5,7 @@
 #ifndef NEW_J_COMPILER_NODES_H
 #define NEW_J_COMPILER_NODES_H
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -20,6 +21,11 @@ class program {
   public:
     bool add_item(std::unique_ptr<top_level> item);
     [[nodiscard]] top_level * find(const std::string & id) const;
+
+    void visit(const std::function<void(top_level &)> & visitor) {
+        for (auto & item : items)
+            visitor(*item);
+    }
 
   private:
     std::vector<std::unique_ptr<top_level>> items{};
@@ -162,7 +168,7 @@ class func_call final : public ast::statement, public ast::expression {
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::func_call; }
     [[nodiscard]] size_t start_pos() const noexcept final { return func_name.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final {
-        return arguments.empty() ? func_name.end() : arguments.back()->end_pos();
+        return arguments.empty() ? func_name.end() + 2 : arguments.back()->end_pos() + 1;
     }
     [[nodiscard]] std::string text() const noexcept final {
         return func_name.src()->substr(start_pos(), end_pos() - start_pos());
@@ -189,7 +195,7 @@ class const_decl final : public ast::top_level, public ast::statement {
 
     [[nodiscard]] std::string identifier() const final { return name.name(); }
 
-    [[nodiscard]] node_type type() const noexcept final { return node_type ::function; }
+    [[nodiscard]] node_type type() const noexcept final { return node_type ::const_decl; }
     [[nodiscard]] size_t start_pos() const noexcept final { return name.start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val->end_pos(); }
     [[nodiscard]] std::string text() const noexcept final {

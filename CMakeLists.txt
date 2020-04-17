@@ -5,7 +5,7 @@ message("Compiler is ${CMAKE_CXX_COMPILER}")
 # Any suggestions welcome on how to improve this line
 if (NOT CMAKE_CXX_COMPILER MATCHES MSVC|cl[^a])
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Og -g")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Og -g -fverbose-asm")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O")
     message("Setting options to Unix style")
 else ()
@@ -22,6 +22,7 @@ add_executable(new_jc
         src/lexer.cpp
         src/parser.cpp
         src/nodes.cpp
+        src/visitor.cpp
         )
 
 set_property(TARGET new_jc PROPERTY CXX_STANDARD 17)
