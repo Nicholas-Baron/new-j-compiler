@@ -27,7 +27,16 @@ class program {
 
 class node {
   public:
+    constexpr node() noexcept = default;
+
+    node(const node &) = delete;
+    node & operator=(const node &) = delete;
+
+    node(node &&) noexcept = default;
+    node & operator=(node &&) noexcept = default;
+
     virtual ~node() noexcept = default;
+
     virtual void accept(visitor &) {}
     [[nodiscard]] virtual ast::node_type type() const noexcept = 0;
 
