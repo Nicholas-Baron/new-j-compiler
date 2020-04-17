@@ -9,6 +9,14 @@
 
 class visitor {
   public:
+    constexpr visitor() noexcept = default;
+
+    visitor(const visitor &) = delete;
+    visitor & operator=(const visitor &) = delete;
+
+    visitor(visitor &&) = default;
+    visitor & operator=(visitor &&) = default;
+
     virtual ~visitor() noexcept = default;
 
     virtual void visit(ast::node &) {}
