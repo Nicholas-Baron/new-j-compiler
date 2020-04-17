@@ -29,5 +29,6 @@ int main(const int arg_count, const char ** args) {
 
         printing_visitor pv{};
         program->visit([&](auto & node) { pv.visit(node); });
+        std::cout << "Visited " << pv.visited_count() << " nodes" << std::endl;
     }
 }

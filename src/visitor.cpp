@@ -12,6 +12,7 @@ void printing_visitor::visit(ast::node & node) {
     std::cout << std::string(indent_depth, ' ');
     indent_depth += indent_size;
 
+    this->node_count++;
     switch (node.type()) {
     case ast::node_type::const_decl:
         std::cout << "Const decl: " << node.text() << '\n';

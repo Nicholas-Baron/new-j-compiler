@@ -28,9 +28,12 @@ class printing_visitor final : public visitor {
 
     void visit(ast::node & node) override;
 
+    [[nodiscard]] constexpr auto visited_count() const noexcept { return node_count; }
+
   private:
     int indent_size;
     int indent_depth = 0;
+    long node_count = 0;
 };
 
 #endif // NEW_J_COMPILER_VISITOR_H
