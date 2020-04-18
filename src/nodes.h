@@ -52,7 +52,10 @@ class node {
 };
 
 // Intermediate classes
-class expression : public ast::node {};
+class expression : public ast::node {
+  public:
+    [[nodiscard]] virtual bool has_children() const noexcept = 0;
+};
 class statement : public ast::node {};
 class top_level : public ast::node {
   public:
@@ -177,6 +180,8 @@ class func_call final : public ast::statement, public ast::expression {
         return func_name.src()->substr(start_pos(), end_pos() - start_pos());
     }
 
+    [[nodiscard]] bool has_children() const noexcept final { return not arguments.empty(); }
+
   private:
     token func_name;
     std::vector<std::unique_ptr<ast::expression>> arguments;
@@ -200,6 +205,8 @@ class const_decl final : public ast::top_level, public ast::statement {
 
     [[nodiscard]] bool in_global_scope() const noexcept { return global; }
 
+    [[nodiscard]] expression * value_expr() const noexcept { return val.get(); }
+
   private:
     opt_typed name;
     std::unique_ptr<expression> val;
@@ -217,6 +224,8 @@ class value final : public ast::expression {
     [[nodiscard]] std::string text() const noexcept final {
         return val.src()->substr(start_pos(), end_pos() - start_pos());
     }
+
+    [[nodiscard]] bool has_children() const noexcept final { return false; }
 
   private:
     token val;
