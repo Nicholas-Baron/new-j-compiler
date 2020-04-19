@@ -12,12 +12,13 @@ enum struct node_type {
     const_decl,
     func_call,
     function,
+    if_statement,
     let_decl,
+    opt_typed,
     parameter,
     parameter_list,
     statement_block,
     value,
-    opt_typed,
 };
 
 // Not part of the AST, just a container for it
@@ -38,9 +39,12 @@ class top_level;
 class function;
 class parameter;
 
-// value declarations
+// declarations
 class const_decl;
 class let_decl;
+
+// Statements
+class if_stmt;
 
 } // namespace ast
 

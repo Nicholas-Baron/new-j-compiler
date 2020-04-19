@@ -16,6 +16,10 @@ std::optional<token_type> keyword(const std::string & identifier) {
         keywords.emplace("int64", token_type::Int64);
         keywords.emplace("const", token_type::Const);
         keywords.emplace("func", token_type::Func);
+        keywords.emplace("if", token_type::If);
+        keywords.emplace("else", token_type::Else);
+        keywords.emplace("ret", token_type::Return);
+        keywords.emplace("return", token_type::Return);
     }
 
     for (const auto & entry : keywords) {
@@ -31,7 +35,7 @@ std::optional<token_type> keyword(const std::string & identifier) {
 
 token lexer::next() {
 
-    // If we have a peeked value, we just return it
+    // If we have previously peeked, just return the peeked item.
     if (peeked.has_value()) {
         const auto to_ret = peeked.value();
         peeked.reset();

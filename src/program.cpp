@@ -15,7 +15,8 @@ void fold(const_decl * declaration) {
     auto * value = declaration->value_expr();
 
     if (value == nullptr) {
-        std::cerr << "Null value on the declaration of " << declaration->identifier() << std::endl;
+        std::cerr << "Null target value on the declaration of " << declaration->identifier()
+                  << std::endl;
         return;
     }
 

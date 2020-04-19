@@ -46,6 +46,8 @@ std::unique_ptr<ast::function> parser::parse_function() {
     std::vector<ast::parameter> params;
     if (lex.peek().type() == token_type::LParen) { params = parse_params(); }
 
+    std::cout << "Parameters read for function " << name << ": " << params.size() << '\n';
+
     std::optional<token> return_type;
     if (lex.peek().type() == token_type::Colon) {
         consume();
@@ -57,21 +59,28 @@ std::unique_ptr<ast::function> parser::parse_function() {
 }
 
 std::unique_ptr<ast::statement> parser::parse_statement() {
+
+    consume_newlines_and_semis();
     switch (lex.peek().type()) {
     case token_type ::LBrace:
         return parse_stmt_block();
     case token_type ::Identifier:
         return parse_identifier_stmt();
+    case token_type ::If:
+        return parse_if_stmt();
     default:
-        std::cerr << "Unexpected start of statement " << lex.peek();
+        std::cerr << "Unexpected start of statement " << lex.peek() << '\n';
         return nullptr;
     }
 }
 
-bool parser::done() {
+void parser::consume_newlines_and_semis() {
     while (lex.peek().type() == token_type::Newline or lex.peek().type() == token_type::Semi)
         consume();
+}
 
+bool parser::done() {
+    consume_newlines_and_semis();
     return this->lex.peek().type() == token_type::EndOfFile;
 }
 
@@ -92,8 +101,10 @@ std::vector<ast::parameter> parser::parse_params() {
         auto type = consume();
         params.emplace_back(std::move(name), std::move(type));
 
-        if (lex.peek().type() == token_type::RParen) break;
-        else if (lex.peek().type() == token_type::Comma)
+        if (lex.peek().type() == token_type::RParen) {
+            consume();
+            break;
+        } else if (lex.peek().type() == token_type::Comma)
             consume();
         else {
             std::cerr << "Unexpected token in parameter list " << lex.peek();
@@ -156,6 +167,42 @@ std::vector<std::unique_ptr<ast::expression>> parser::parse_arguments() {
     return args;
 }
 
+std::unique_ptr<ast::if_stmt> parser::parse_if_stmt() {
+    consume(); // should be the if token
+
+    if (consume().type() != token_type::LParen) {
+        std::cerr << "If requires an opening parenthesis.\n";
+        return nullptr;
+    }
+
+    auto condition = parse_expression(0);
+
+    if (consume().type() != token_type::RParen) {
+        std::cerr << "If requires a closing parenthesis.\n";
+        return nullptr;
+    }
+
+    auto then_block = parse_statement();
+
+    if (then_block->type() == ast::node_type::statement_block
+        and lex.peek().type() == token_type::Else) {
+
+        consume();
+        consume_newlines_and_semis();
+
+        switch (lex.peek().type()) {
+        case token_type ::If:
+        case token_type ::LBrace:
+            return std::make_unique<ast::if_stmt>(std::move(condition), std::move(then_block),
+                                                  parse_statement());
+        default:
+            std::cerr << "Only '{' or 'if' allowed after 'else'.\n";
+            return nullptr;
+        }
+    } else
+        return std::make_unique<ast::if_stmt>(std::move(condition), std::move(then_block));
+}
+
 // Expression parsing
 
 int op_precedence(const token & tok) {
@@ -199,7 +246,7 @@ std::unique_ptr<ast::expression> parser::parse_primary_expr() {
     case token_type ::Int:
     case token_type ::Float:
     case token_type ::StringLiteral:
-        return std::make_unique<ast::value>(consume());
+        return std::make_unique<ast::literal_or_variable>(consume());
     default:
         std::cerr << "Unexpected token as primary expression " << consume() << '\n';
         return nullptr;

@@ -22,6 +22,7 @@ class parser final {
   private:
     bool done();
     token consume();
+    void consume_newlines_and_semis();
 
     bool match_expr();
     bool match_stmt();
@@ -39,10 +40,12 @@ class parser final {
     std::unique_ptr<ast::stmt_block> parse_stmt_block();
     std::unique_ptr<ast::statement> parse_identifier_stmt();
     std::unique_ptr<ast::statement> parse_call_stmt(token && tok);
+    std::unique_ptr<ast::if_stmt> parse_if_stmt();
 
     std::vector<std::unique_ptr<ast::expression>> parse_arguments();
 
     // Expressions
+    // TODO: Make min_preced optional
     std::unique_ptr<ast::expression> parse_expression(int min_preced,
                                                       associativity assoc = associativity::right);
     std::unique_ptr<ast::expression> parse_primary_expr();

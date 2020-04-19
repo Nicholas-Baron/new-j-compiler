@@ -1,3 +1,10 @@
 const x : int32 = 5
 # This is a comment should not be tokenized.
 func main print("Hello World")
+
+func fib(n : int32) : int64
+    if (n <= 1 or n == 5){
+        ret n;
+    }else{
+        return fib(n - 1) + fib(n - 2)
+    }

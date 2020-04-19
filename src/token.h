@@ -11,28 +11,32 @@
 enum struct token_type {
     Assign,
     Colon,
+    Comma,
     Const,
+    Else,
     EndOfFile,
     Float,
+    Func,
     Identifier,
+    If,
     Int,
     Int32,
     Int64,
+    LBrace,
     LParen,
     Newline,
-    RParen,
-    Semi,
-    Func,
-    Struct,
-    Comma,
-    LBrace,
     RBrace,
+    RParen,
+    Return,
+    Semi,
     StringLiteral,
+    Struct,
 };
 
 class token final {
   public:
     using token_data = std::variant<std::monostate, bool, long, float, std::string, token_type>;
+    using source_t = std::shared_ptr<const std::string>;
 
     token(const std::shared_ptr<std::string> & text, size_t position, size_t length,
           token_type type)
@@ -58,7 +62,7 @@ class token final {
     [[nodiscard]] token_type type() const noexcept { return tok_type; }
     [[nodiscard]] auto start() const noexcept { return pos; }
     [[nodiscard]] auto end() const noexcept { return pos + len; }
-    [[nodiscard]] auto src() const noexcept { return src_text; }
+    [[nodiscard]] source_t src() const noexcept { return src_text; }
 
   private:
     std::shared_ptr<const std::string> src_text;

@@ -48,7 +48,13 @@ class node {
     // Functions to help with debug printing
     [[nodiscard]] virtual size_t start_pos() const noexcept = 0;
     [[nodiscard]] virtual size_t end_pos() const noexcept = 0;
-    [[nodiscard]] virtual std::string text() const noexcept = 0;
+    [[nodiscard]] std::string text() const noexcept {
+        return src()->substr(start_pos(), end_pos() - start_pos());
+    }
+
+    // TODO: Maybe better to use a std::string *
+    // , as this function does not modify ownership
+    [[nodiscard]] virtual token::source_t src() const noexcept = 0;
 };
 
 // Intermediate classes
@@ -68,16 +74,13 @@ class opt_typed final : public ast::node {
         : ident{std::move(identifier)}, written_type{std::move(type)} {}
 
     [[nodiscard]] std::string name() const { return std::get<std::string>(ident.get_data()); }
-    [[nodiscard]] auto src() const { return ident.src(); }
+    [[nodiscard]] token::source_t src() const noexcept final { return ident.src(); }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::opt_typed; }
 
     [[nodiscard]] size_t start_pos() const noexcept final { return ident.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final {
         return written_type.has_value() ? written_type.value().end() : ident.end();
-    }
-    [[nodiscard]] std::string text() const noexcept final {
-        return ident.src()->substr(start_pos(), end_pos() - start_pos());
     }
 
     [[nodiscard]] auto user_typed() const noexcept { return written_type.has_value(); }
@@ -97,9 +100,8 @@ class parameter final : public ast::node {
 
     [[nodiscard]] size_t start_pos() const noexcept final { return name.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val_type.end(); }
-    [[nodiscard]] std::string text() const noexcept final {
-        return name.src()->substr(start_pos(), end_pos() - start_pos());
-    }
+
+    [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
 
   private:
     token name, val_type;
@@ -123,9 +125,7 @@ class function final : public ast::top_level {
     [[nodiscard]] node_type type() const noexcept final { return node_type ::function; }
     [[nodiscard]] size_t start_pos() const noexcept final { return name.start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return body->end_pos(); }
-    [[nodiscard]] std::string text() const noexcept final {
-        return name.src()->substr(start_pos(), end_pos() - start_pos());
-    }
+    [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
 
   private:
     opt_typed name;
@@ -152,14 +152,33 @@ class stmt_block final : public ast::statement {
         return end.has_value() ? end->end()
                                : (stmts.empty() ? start.end() : stmts.back()->end_pos());
     }
-    [[nodiscard]] std::string text() const noexcept final {
-        return start.src()->substr(start_pos(), end_pos() - start_pos());
-    }
+
+    [[nodiscard]] token::source_t src() const noexcept final { return start.src(); }
 
   private:
     token start;
     std::vector<std::unique_ptr<ast::statement>> stmts;
     std::optional<token> end;
+};
+
+class if_stmt final : public ast::statement {
+  public:
+    if_stmt(std::unique_ptr<expression> condition, std::unique_ptr<statement> then_block,
+            std::unique_ptr<statement> else_block = nullptr)
+        : cond{std::move(condition)}, then_block{std::move(then_block)}, else_block{std::move(
+                                                                             else_block)} {}
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::if_statement; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return cond->start_pos(); }
+    [[nodiscard]] size_t end_pos() const noexcept final {
+        return (else_block == nullptr) ? then_block->end_pos() : else_block->end_pos();
+    }
+    [[nodiscard]] token::source_t src() const noexcept final { return cond->src(); }
+
+  private:
+    std::unique_ptr<ast::expression> cond;
+    std::unique_ptr<ast::statement> then_block;
+    std::unique_ptr<ast::statement> else_block;
 };
 
 class func_call final : public ast::statement, public ast::expression {
@@ -176,9 +195,8 @@ class func_call final : public ast::statement, public ast::expression {
     [[nodiscard]] size_t end_pos() const noexcept final {
         return arguments.empty() ? func_name.end() + 2 : arguments.back()->end_pos() + 1;
     }
-    [[nodiscard]] std::string text() const noexcept final {
-        return func_name.src()->substr(start_pos(), end_pos() - start_pos());
-    }
+
+    [[nodiscard]] token::source_t src() const noexcept final { return func_name.src(); }
 
     [[nodiscard]] bool has_children() const noexcept final { return not arguments.empty(); }
 
@@ -199,9 +217,7 @@ class const_decl final : public ast::top_level, public ast::statement {
     [[nodiscard]] node_type type() const noexcept final { return node_type ::const_decl; }
     [[nodiscard]] size_t start_pos() const noexcept final { return name.start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val->end_pos(); }
-    [[nodiscard]] std::string text() const noexcept final {
-        return name.src()->substr(start_pos(), end_pos() - start_pos());
-    }
+    [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
 
     [[nodiscard]] bool in_global_scope() const noexcept { return global; }
 
@@ -214,18 +230,17 @@ class const_decl final : public ast::top_level, public ast::statement {
 };
 
 // Expressions
-class value final : public ast::expression {
+class literal_or_variable final : public ast::expression {
   public:
-    explicit value(token && val) : val{std::move(val)} {}
+    explicit literal_or_variable(token && val) : val{std::move(val)} {}
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::value; }
     [[nodiscard]] size_t start_pos() const noexcept final { return val.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val.end(); }
-    [[nodiscard]] std::string text() const noexcept final {
-        return val.src()->substr(start_pos(), end_pos() - start_pos());
-    }
 
     [[nodiscard]] bool has_children() const noexcept final { return false; }
+
+    [[nodiscard]] token::source_t src() const noexcept final { return val.src(); }
 
   private:
     token val;
