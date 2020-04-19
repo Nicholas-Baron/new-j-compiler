@@ -9,6 +9,7 @@ namespace ast {
 
 // All node types
 enum struct node_type {
+    binary_op,
     const_decl,
     func_call,
     function,
@@ -45,6 +46,9 @@ class let_decl;
 
 // Statements
 class if_stmt;
+
+// expressions
+class bin_op;
 
 } // namespace ast
 

@@ -20,6 +20,7 @@ std::optional<token_type> keyword(const std::string & identifier) {
         keywords.emplace("else", token_type::Else);
         keywords.emplace("ret", token_type::Return);
         keywords.emplace("return", token_type::Return);
+        keywords.emplace("or", token_type::Boolean_Or);
     }
 
     for (const auto & entry : keywords) {
@@ -173,7 +174,31 @@ token lexer::next() {
         case ':':
             return {input_text, start, 1, token_type ::Colon};
         case '=':
-            return {input_text, start, 1, token_type ::Assign};
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != current_char)
+                return {input_text, start, 1, token_type ::Assign};
+            else {
+                current_pos++;
+                return {input_text, start, 2, token_type::Eq};
+            }
+        case '|':
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != current_char)
+                return {input_text, start, 1, token_type ::Bit_Or};
+            else {
+                current_pos++;
+                return {input_text, start, 2, token_type ::Boolean_Or};
+            }
+        case '<':
+            if (current_pos >= input_text->size()
+                or (input_text->at(current_pos) != current_char
+                    and input_text->at(current_pos) != '='))
+                return {input_text, start, 1, token_type ::Lt};
+            else if (input_text->at(current_pos) == current_char) {
+                current_pos++;
+                return {input_text, start, 2, token_type ::Shl};
+            } else {
+                current_pos++;
+                return {input_text, start, 2, token_type ::Le};
+            }
         case '\n':
             return {input_text, start, 1, token_type ::Newline};
         case '(':

@@ -246,6 +246,34 @@ class literal_or_variable final : public ast::expression {
     token val;
 };
 
+class bin_op final : public ast::expression {
+  public:
+    enum class operation { add, sub, mult, div, boolean_and, boolean_or, le, lt, gt, ge, eq };
+
+    bin_op(std::unique_ptr<expression> lhs, operation op, std::unique_ptr<expression> rhs)
+        : lhs{std::move(lhs)}, op{op}, rhs{std::move(rhs)} {}
+
+    void accept(visitor & v) final {
+        v.visit(*lhs);
+        v.visit(*rhs);
+    }
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::binary_op; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return lhs->start_pos(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return rhs->end_pos(); }
+
+    [[nodiscard]] bool has_children() const noexcept final { return true; }
+
+    [[nodiscard]] token::source_t src() const noexcept final { return lhs->src(); }
+
+    [[nodiscard]] operation oper() const noexcept { return op; }
+
+  private:
+    std::unique_ptr<expression> lhs;
+    operation op;
+    std::unique_ptr<expression> rhs;
+};
+
 } // namespace ast
 
 #endif // NEW_J_COMPILER_NODES_H

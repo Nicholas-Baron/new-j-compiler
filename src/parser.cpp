@@ -205,19 +205,32 @@ std::unique_ptr<ast::if_stmt> parser::parse_if_stmt() {
 
 // Expression parsing
 
-int op_precedence(const token & tok) {
+static int op_precedence(const token & tok) {
     switch (tok.type()) {
     case token_type ::LParen:
         return 25;
+    case token_type ::Lt:
+    case token_type ::Le:
+        return 15;
+    case token_type ::Eq:
+        return 12;
+    case token_type ::Boolean_Or:
+    case token_type ::Boolean_And:
+        return 1;
     default:
         std::cerr << "Asked for precedence of " << tok << '\n';
         return -1;
     }
 }
 
-associativity op_associativity(const token & tok) {
+static associativity op_associativity(const token & tok) {
     switch (tok.type()) {
     case token_type::LParen:
+    case token_type ::Lt:
+    case token_type ::Le:
+    case token_type ::Boolean_Or:
+    case token_type ::Boolean_And:
+    case token_type ::Eq:
         return associativity::left;
     default:
         std::cerr << "Asked for associativity of " << tok << '\n';
@@ -255,17 +268,37 @@ std::unique_ptr<ast::expression> parser::parse_primary_expr() {
 bool parser::match_secondary_expr() {
     switch (lex.peek().type()) {
     case token_type ::LParen:
+    case token_type ::Lt:
+    case token_type ::Le:
+    case token_type ::Plus:
+    case token_type ::Minus:
+    case token_type ::Boolean_Or:
+    case token_type ::Eq:
         return true;
     default:
+        std::cerr << "Token " << lex.peek() << " is not a secondary expression.\n";
+        [[fallthrough]];
+    case token_type ::RParen:
+    case token_type ::Newline:
+    case token_type ::Semi:
         return false;
     }
 }
 std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<ast::expression> lhs,
                                                               int precedence,
                                                               associativity associativity) {
-    switch (lex.peek().type()) {
+    switch (const auto op = consume(); op.type()) {
+    case token_type ::Le:
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::le,
+                                             parse_expression(precedence, associativity));
+    case token_type ::Eq:
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::eq,
+                                             parse_expression(precedence, associativity));
+    case token_type ::Boolean_Or:
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::boolean_or,
+                                             parse_expression(precedence, associativity));
     default:
-        std::cerr << "Unexpected token in secondary expression " << lex.peek() << '\n';
+        std::cerr << "Unexpected token in secondary expression " << op << '\n';
         return lhs;
     }
 }
