@@ -11,6 +11,8 @@
     for (auto i = 1; i < arg_count; i++) {
         if (std::string arg{args[i]}; arg == "--help" or arg == "-h") {
             settings.print_help = true;
+        } else if (arg == "-fsyntax-tree") {
+            settings.print_syntax = true;
         } else if (arg.front() != '-') {
             settings.input_filename = arg;
         } else {

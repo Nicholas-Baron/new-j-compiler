@@ -27,8 +27,10 @@ int main(const int arg_count, const char ** args) {
     else {
         std::cout << "Success\n";
 
-        printing_visitor pv{};
-        program->visit([&](auto & node) { pv.visit(node); });
-        std::cout << "Visited " << pv.visited_count() << " nodes" << std::endl;
+        if (user_args->print_syntax) {
+            printing_visitor pv{};
+            program->visit([&](auto & node) { pv.visit(node); });
+            std::cout << "Visited " << pv.visited_count() << " nodes" << std::endl;
+        }
     }
 }
