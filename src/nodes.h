@@ -168,6 +168,12 @@ class if_stmt final : public ast::statement {
         : cond{std::move(condition)}, then_block{std::move(then_block)}, else_block{std::move(
                                                                              else_block)} {}
 
+    void accept(visitor & v) override {
+        v.visit(*cond);
+        v.visit(*then_block);
+        if (else_block != nullptr) v.visit(*else_block);
+    }
+
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::if_statement; }
     [[nodiscard]] size_t start_pos() const noexcept final { return cond->start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final {
@@ -186,6 +192,10 @@ class ret_stmt final : public ast::statement {
     explicit ret_stmt(token && ret, std::unique_ptr<expression> value = nullptr)
         : ret{std::move(ret)}, value{std::move(value)} {}
 
+    void accept(visitor & v) final {
+        if (value != nullptr) v.visit(*value);
+    }
+
     [[nodiscard]] ast::node_type type() const noexcept final {
         return node_type ::return_statement;
     }
@@ -202,25 +212,27 @@ class ret_stmt final : public ast::statement {
 
 class func_call final : public ast::statement, public ast::expression {
   public:
-    func_call(token && callee, std::vector<std::unique_ptr<ast::expression>> && args)
+    func_call(std::unique_ptr<expression> callee,
+              std::vector<std::unique_ptr<ast::expression>> && args)
         : func_name{std::move(callee)}, arguments{std::move(args)} {}
 
     void accept(visitor & v) final {
+        v.visit(*func_name);
         for (auto & arg : arguments) v.visit(*arg);
     }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::func_call; }
-    [[nodiscard]] size_t start_pos() const noexcept final { return func_name.start(); }
+    [[nodiscard]] size_t start_pos() const noexcept final { return func_name->start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final {
-        return arguments.empty() ? func_name.end() + 2 : arguments.back()->end_pos() + 1;
+        return arguments.empty() ? func_name->end_pos() + 2 : arguments.back()->end_pos() + 1;
     }
 
-    [[nodiscard]] token::source_t src() const noexcept final { return func_name.src(); }
+    [[nodiscard]] token::source_t src() const noexcept final { return func_name->src(); }
 
     [[nodiscard]] bool has_children() const noexcept final { return not arguments.empty(); }
 
   private:
-    token func_name;
+    std::unique_ptr<ast::expression> func_name;
     std::vector<std::unique_ptr<ast::expression>> arguments;
 };
 

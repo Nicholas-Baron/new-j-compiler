@@ -36,6 +36,7 @@ void printing_visitor::visit(ast::node & node) {
         break;
     case ast::node_type::statement_block:
         std::cout << "Statement block " << node.text() << '\n';
+        node.accept(*this);
         break;
     case ast::node_type::value:
         std::cout << "Value " << node.text() << '\n';
@@ -47,6 +48,18 @@ void printing_visitor::visit(ast::node & node) {
         break;
     case ast::node_type::func_call:
         std::cout << "Function call to " << node.text() << '\n';
+        node.accept(*this);
+        break;
+    case ast::node_type::if_statement:
+        std::cout << "If statement\n";
+        node.accept(*this);
+        break;
+    case ast::node_type ::binary_op:
+        std::cout << "Binary operation\n";
+        node.accept(*this);
+        break;
+    case ast::node_type ::return_statement:
+        std::cout << "Return\n";
         node.accept(*this);
         break;
     default:

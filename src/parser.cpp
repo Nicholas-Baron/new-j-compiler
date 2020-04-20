@@ -126,7 +126,10 @@ std::unique_ptr<ast::stmt_block> parser::parse_stmt_block() {
     }
 
     ast::stmt_block block{consume()};
-    while (lex.peek().type() != token_type::RBrace) { block.append(parse_statement()); }
+    while (lex.peek().type() != token_type::RBrace) {
+        block.append(parse_statement());
+        consume_newlines_and_semis();
+    }
 
     // Will be a RBrace
     block.terminate(consume());
@@ -137,7 +140,8 @@ std::unique_ptr<ast::stmt_block> parser::parse_stmt_block() {
 std::unique_ptr<ast::statement> parser::parse_identifier_stmt() {
     auto identifier = consume();
 
-    if (lex.peek().type() == token_type::LParen) return parse_call(std::move(identifier));
+    if (lex.peek().type() == token_type::LParen)
+        return parse_call(std::make_unique<ast::literal_or_variable>(std::move(identifier)));
     else {
         std::cerr << "Unexpected token after identifier " << lex.peek();
         return nullptr;
@@ -145,7 +149,7 @@ std::unique_ptr<ast::statement> parser::parse_identifier_stmt() {
 }
 
 // Will consume the left paren only if needed
-std::unique_ptr<ast::func_call> parser::parse_call(token && tok) {
+std::unique_ptr<ast::func_call> parser::parse_call(std::unique_ptr<ast::expression> tok) {
     if (lex.peek().type() == token_type::LParen) consume();
 
     return std::make_unique<ast::func_call>(std::move(tok), parse_arguments());
@@ -337,7 +341,7 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
         return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::boolean_or,
                                              parse_expression(precedence, associativity));
     case token_type ::LParen:
-        return parse_call(std::move(op));
+        return parse_call(std::move(lhs));
     default:
         std::cerr << "Unexpected token in secondary expression " << op << '\n';
         return lhs;

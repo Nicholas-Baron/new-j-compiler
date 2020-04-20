@@ -41,7 +41,7 @@ class parser final {
     std::unique_ptr<ast::statement> parse_statement();
     std::unique_ptr<ast::stmt_block> parse_stmt_block();
     std::unique_ptr<ast::statement> parse_identifier_stmt();
-    std::unique_ptr<ast::func_call> parse_call(token && tok);
+    std::unique_ptr<ast::func_call> parse_call(std::unique_ptr<ast::expression> tok);
     std::unique_ptr<ast::if_stmt> parse_if_stmt();
     std::unique_ptr<ast::ret_stmt> parse_return_stmt();
 
