@@ -199,6 +199,11 @@ token lexer::next() {
                 current_pos++;
                 return {input_text, start, 2, token_type ::Le};
             }
+        case '+':
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != '=')
+                return {input_text, start, 1, token_type ::Plus};
+            else
+                return {input_text, start, 2, token_type ::Plus_Assign};
         case '-':
             if (current_pos >= input_text->size() or input_text->at(current_pos) != '=')
                 return {input_text, start, 1, token_type ::Minus};

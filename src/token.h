@@ -34,6 +34,7 @@ enum struct token_type {
     Minus_Assign,
     Newline,
     Plus,
+    Plus_Assign,
     RBrace,
     RParen,
     Return,
