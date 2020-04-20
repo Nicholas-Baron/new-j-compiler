@@ -72,6 +72,8 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
         return parse_return_stmt();
     default:
         std::cerr << "Unexpected start of statement " << lex.peek() << '\n';
+        [[fallthrough]];
+    case token_type ::RBrace:
         return nullptr;
     }
 }
@@ -142,12 +144,9 @@ std::unique_ptr<ast::statement> parser::parse_identifier_stmt() {
     }
 }
 
+// Will consume the left paren only if needed
 std::unique_ptr<ast::func_call> parser::parse_call(token && tok) {
-    if (lex.peek().type() != token_type::LParen) {
-        std::cerr << "Unexpected token at start of arguments: " << lex.peek();
-        return {};
-    } else
-        consume();
+    if (lex.peek().type() == token_type::LParen) consume();
 
     return std::make_unique<ast::func_call>(std::move(tok), parse_arguments());
 }
@@ -220,10 +219,14 @@ std::unique_ptr<ast::ret_stmt> parser::parse_return_stmt() {
 
 // Expression parsing
 
-static int op_precedence(const token & tok) {
+namespace {
+int op_precedence(const token & tok) {
     switch (tok.type()) {
     case token_type ::LParen:
         return 25;
+    case token_type ::Minus:
+    case token_type ::Plus:
+        return 20;
     case token_type ::Lt:
     case token_type ::Le:
         return 15;
@@ -238,7 +241,7 @@ static int op_precedence(const token & tok) {
     }
 }
 
-static associativity op_associativity(const token & tok) {
+associativity op_associativity(const token & tok) {
     switch (tok.type()) {
     case token_type::LParen:
     case token_type ::Lt:
@@ -246,12 +249,15 @@ static associativity op_associativity(const token & tok) {
     case token_type ::Boolean_Or:
     case token_type ::Boolean_And:
     case token_type ::Eq:
+    case token_type ::Minus:
+    case token_type ::Plus:
         return associativity::left;
     default:
         std::cerr << "Asked for associativity of " << tok << '\n';
         return associativity::right;
     }
 }
+} // namespace
 
 std::unique_ptr<ast::expression> parser::parse_expression(int min_preced, associativity assoc) {
 
@@ -315,6 +321,12 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
                                                               int precedence,
                                                               associativity associativity) {
     switch (auto op = consume(); op.type()) {
+    case token_type ::Plus:
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::add,
+                                             parse_expression(precedence, associativity));
+    case token_type ::Minus:
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::sub,
+                                             parse_expression(precedence, associativity));
     case token_type ::Le:
         return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::le,
                                              parse_expression(precedence, associativity));
