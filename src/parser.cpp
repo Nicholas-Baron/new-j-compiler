@@ -135,24 +135,25 @@ std::unique_ptr<ast::stmt_block> parser::parse_stmt_block() {
 std::unique_ptr<ast::statement> parser::parse_identifier_stmt() {
     auto identifier = consume();
 
-    if (lex.peek().type() == token_type::LParen) return parse_call_stmt(std::move(identifier));
+    if (lex.peek().type() == token_type::LParen) return parse_call(std::move(identifier));
     else {
         std::cerr << "Unexpected token after identifier " << lex.peek();
         return nullptr;
     }
 }
 
-std::unique_ptr<ast::statement> parser::parse_call_stmt(token && tok) {
+std::unique_ptr<ast::func_call> parser::parse_call(token && tok) {
+    if (lex.peek().type() != token_type::LParen) {
+        std::cerr << "Unexpected token at start of arguments: " << lex.peek();
+        return {};
+    } else
+        consume();
+
     return std::make_unique<ast::func_call>(std::move(tok), parse_arguments());
 }
 
 std::vector<std::unique_ptr<ast::expression>> parser::parse_arguments() {
-    if (lex.peek().type() != token_type::LParen) {
-        std::cerr << "Unexpected token at start of arguments: " << lex.peek();
-        return {};
-    }
 
-    consume();
     std::vector<std::unique_ptr<ast::expression>> args;
     if (lex.peek().type() != token_type::RParen) {
         args.push_back(parse_expression(0));
@@ -313,7 +314,7 @@ bool parser::match_secondary_expr() {
 std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<ast::expression> lhs,
                                                               int precedence,
                                                               associativity associativity) {
-    switch (const auto op = consume(); op.type()) {
+    switch (auto op = consume(); op.type()) {
     case token_type ::Le:
         return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::le,
                                              parse_expression(precedence, associativity));
@@ -323,6 +324,8 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
     case token_type ::Boolean_Or:
         return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::boolean_or,
                                              parse_expression(precedence, associativity));
+    case token_type ::LParen:
+        return parse_call(std::move(op));
     default:
         std::cerr << "Unexpected token in secondary expression " << op << '\n';
         return lhs;
