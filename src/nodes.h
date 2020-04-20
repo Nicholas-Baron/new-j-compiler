@@ -181,6 +181,25 @@ class if_stmt final : public ast::statement {
     std::unique_ptr<ast::statement> else_block;
 };
 
+class ret_stmt final : public ast::statement {
+  public:
+    explicit ret_stmt(token && ret, std::unique_ptr<expression> value = nullptr)
+        : ret{std::move(ret)}, value{std::move(value)} {}
+
+    [[nodiscard]] ast::node_type type() const noexcept final {
+        return node_type ::return_statement;
+    }
+    [[nodiscard]] size_t start_pos() const noexcept final { return value->start_pos(); }
+    [[nodiscard]] size_t end_pos() const noexcept final {
+        return (value == nullptr) ? ret.end() : value->end_pos();
+    }
+    [[nodiscard]] token::source_t src() const noexcept final { return ret.src(); }
+
+  private:
+    token ret;
+    std::unique_ptr<ast::expression> value;
+};
+
 class func_call final : public ast::statement, public ast::expression {
   public:
     func_call(token && callee, std::vector<std::unique_ptr<ast::expression>> && args)

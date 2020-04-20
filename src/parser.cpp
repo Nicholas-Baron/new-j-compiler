@@ -68,6 +68,8 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
         return parse_identifier_stmt();
     case token_type ::If:
         return parse_if_stmt();
+    case token_type ::Return:
+        return parse_return_stmt();
     default:
         std::cerr << "Unexpected start of statement " << lex.peek() << '\n';
         return nullptr;
@@ -203,6 +205,18 @@ std::unique_ptr<ast::if_stmt> parser::parse_if_stmt() {
         return std::make_unique<ast::if_stmt>(std::move(condition), std::move(then_block));
 }
 
+std::unique_ptr<ast::ret_stmt> parser::parse_return_stmt() {
+    auto tok = consume();
+    if (tok.type() != token_type::Return) {
+        std::cerr << "Return statement must start with return.\n";
+        return nullptr;
+    }
+
+    if (match_expr()) return std::make_unique<ast::ret_stmt>(std::move(tok), parse_expression(0));
+    else
+        return std::make_unique<ast::ret_stmt>(std::move(tok));
+}
+
 // Expression parsing
 
 static int op_precedence(const token & tok) {
@@ -263,6 +277,18 @@ std::unique_ptr<ast::expression> parser::parse_primary_expr() {
     default:
         std::cerr << "Unexpected token as primary expression " << consume() << '\n';
         return nullptr;
+    }
+}
+bool parser::match_expr() {
+    switch (lex.peek().type()) {
+    case token_type ::LParen:
+    case token_type ::StringLiteral:
+    case token_type ::Float:
+    case token_type ::Int:
+    case token_type ::Identifier:
+        return true;
+    default:
+        return false;
     }
 }
 bool parser::match_secondary_expr() {

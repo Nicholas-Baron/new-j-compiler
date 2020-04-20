@@ -18,6 +18,7 @@ enum struct node_type {
     opt_typed,
     parameter,
     parameter_list,
+    return_statement,
     statement_block,
     value,
 };
@@ -46,6 +47,7 @@ class let_decl;
 
 // Statements
 class if_stmt;
+class ret_stmt;
 
 // expressions
 class bin_op;

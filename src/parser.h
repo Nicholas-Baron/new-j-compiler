@@ -25,6 +25,8 @@ class parser final {
     void consume_newlines_and_semis();
 
     bool match_expr();
+    bool match_unary_expr();
+    bool match_secondary_expr();
     bool match_stmt();
 
     // Top level items
@@ -41,6 +43,7 @@ class parser final {
     std::unique_ptr<ast::statement> parse_identifier_stmt();
     std::unique_ptr<ast::statement> parse_call_stmt(token && tok);
     std::unique_ptr<ast::if_stmt> parse_if_stmt();
+    std::unique_ptr<ast::ret_stmt> parse_return_stmt();
 
     std::vector<std::unique_ptr<ast::expression>> parse_arguments();
 
@@ -52,7 +55,6 @@ class parser final {
     std::unique_ptr<ast::expression>
     parse_secondary_expr(std::unique_ptr<ast::expression> unique_ptr, int precedence,
                          associativity associativity);
-    bool match_secondary_expr();
 
     lexer lex;
 };
