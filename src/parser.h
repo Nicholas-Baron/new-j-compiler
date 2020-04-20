@@ -49,7 +49,7 @@ class parser final {
 
     // Expressions
     // TODO: Make min_preced optional
-    std::unique_ptr<ast::expression> parse_expression(int min_preced,
+    std::unique_ptr<ast::expression> parse_expression(int min_preced = 0,
                                                       associativity assoc = associativity::right);
     std::unique_ptr<ast::expression> parse_primary_expr();
     std::unique_ptr<ast::expression>

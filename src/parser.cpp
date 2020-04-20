@@ -159,10 +159,10 @@ std::vector<std::unique_ptr<ast::expression>> parser::parse_arguments() {
 
     std::vector<std::unique_ptr<ast::expression>> args;
     if (lex.peek().type() != token_type::RParen) {
-        args.push_back(parse_expression(0));
+        args.push_back(parse_expression());
         while (lex.peek().type() == token_type::Comma) {
             consume();
-            args.push_back(parse_expression(0));
+            args.push_back(parse_expression());
         }
         // Should be RParen
         if (auto tok = consume(); tok.type() != token_type::RParen)
@@ -181,7 +181,7 @@ std::unique_ptr<ast::if_stmt> parser::parse_if_stmt() {
         return nullptr;
     }
 
-    auto condition = parse_expression(0);
+    auto condition = parse_expression();
 
     if (consume().type() != token_type::RParen) {
         std::cerr << "If requires a closing parenthesis.\n";
@@ -216,7 +216,7 @@ std::unique_ptr<ast::ret_stmt> parser::parse_return_stmt() {
         return nullptr;
     }
 
-    if (match_expr()) return std::make_unique<ast::ret_stmt>(std::move(tok), parse_expression(0));
+    if (match_expr()) return std::make_unique<ast::ret_stmt>(std::move(tok), parse_expression());
     else
         return std::make_unique<ast::ret_stmt>(std::move(tok));
 }
@@ -360,7 +360,7 @@ std::unique_ptr<ast::const_decl> parser::parse_const_decl() {
         return nullptr;
     }
 
-    return std::make_unique<ast::const_decl>(std::move(ident), parse_expression(0), true);
+    return std::make_unique<ast::const_decl>(std::move(ident), parse_expression(), true);
 }
 ast::opt_typed parser::parse_opt_typed() {
     auto ident = consume();
