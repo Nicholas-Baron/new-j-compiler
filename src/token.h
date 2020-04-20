@@ -46,7 +46,7 @@ enum struct token_type {
 
 class token final {
   public:
-    using token_data = std::variant<std::monostate, bool, long, float, std::string, token_type>;
+    using token_data = std::variant<std::monostate, bool, long, double, std::string, token_type>;
     using source_t = std::shared_ptr<const std::string>;
 
     token(const std::shared_ptr<std::string> & text, size_t position, size_t length,
