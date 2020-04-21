@@ -1,6 +1,6 @@
-const x : int32 = 5
+const x : int32 = 5 + 4
 # This is a comment should not be tokenized.
-func main print("Hello World")
+func main { print("Hello World") ; print(fib(x)) }
 
 func fib(n : int32) : int64
     if (n <= 1 or n == 5){
