@@ -51,6 +51,7 @@ class ret_stmt;
 
 // expressions
 class bin_op;
+class literal_or_variable;
 
 } // namespace ast
 

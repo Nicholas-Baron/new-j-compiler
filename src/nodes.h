@@ -265,6 +265,8 @@ class literal_or_variable final : public ast::expression {
   public:
     explicit literal_or_variable(token && val) : val{std::move(val)} {}
 
+    literal_or_variable(const literal_or_variable & src) : val{src.val} {}
+
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::value; }
     [[nodiscard]] size_t start_pos() const noexcept final { return val.start(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val.end(); }
@@ -273,8 +275,13 @@ class literal_or_variable final : public ast::expression {
 
     [[nodiscard]] token::source_t src() const noexcept final { return val.src(); }
 
+    [[nodiscard]] token::token_data data() const { return val.get_data(); }
+
   private:
     token val;
+    friend std::ostream & operator<<(std::ostream & lhs, const literal_or_variable & rhs) {
+        return lhs << rhs.val;
+    }
 };
 
 class bin_op final : public ast::expression {
