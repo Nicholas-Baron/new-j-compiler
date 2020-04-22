@@ -313,11 +313,23 @@ ir::basic_block * ir_gen_visitor::append_block(std::string && name) {
 void ir_gen_visitor::dump() const {
     prog.for_each_func([](const ir::function * func) {
         if (func != nullptr) {
-            std::cout << func->name << '\n';
+            std::cout << func->name << ' ';
+            {
+                bool first = true;
+                for (const auto & param : func->parameters) {
+                    if (not first) std::cout << ", ";
+                    else
+                        first = false;
+
+                    std::cout << param;
+                }
+            }
+            std::cout << " {\n";
             for (const auto & block : func->body) {
                 std::cout << block->name << ":\n";
-                for (const auto & inst : block->contents) std::cout << inst << '\n';
+                for (const auto & inst : block->contents) std::cout << '\t' << inst << '\n';
             }
+            std::cout << "}\n" << std::endl;
         }
     });
 }
