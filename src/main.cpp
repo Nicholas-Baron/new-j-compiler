@@ -1,8 +1,10 @@
 
-#include <iostream>
-
 #include "config.h"
 #include "lexer.h"
+#include "parser.h"
+#include "visitor.h"
+
+#include <iostream>
 
 int main(const int arg_count, const char ** args) {
     const auto user_args = parse_cmdline_args(arg_count, args);
@@ -18,9 +20,21 @@ int main(const int arg_count, const char ** args) {
     }
     std::cout << "File to read: " << user_args->input_filename << std::endl;
 
-    lexer p{user_args->input_filename};
+    parser p{lexer{user_args->input_filename}};
 
-    while (p.peek().type() != token_type::EndOfFile) {
-        std::cout << p.next() << std::endl;
+    auto program = p.parse_program();
+    if (program == nullptr) std::cout << "Failed\n";
+    else {
+        std::cout << "Success\n";
+
+        if (user_args->print_syntax) {
+            printing_visitor pv{};
+            program->visit([&](auto & node) { pv.visit(node); });
+            std::cout << "Visited " << pv.visited_count() << " nodes" << std::endl;
+        }
+
+        ir_gen_visitor ir_gen{};
+        program->visit([&](auto & node) { ir_gen.visit(node); });
+        ir_gen.dump();
     }
 }

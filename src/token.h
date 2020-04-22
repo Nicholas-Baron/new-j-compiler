@@ -10,23 +10,44 @@
 
 enum struct token_type {
     Assign,
+    Bit_Or,
+    Boolean_And,
+    Boolean_Or,
     Colon,
+    Comma,
     Const,
+    Else,
     EndOfFile,
+    Eq,
     Float,
+    Func,
     Identifier,
+    If,
     Int,
     Int32,
     Int64,
+    LBrace,
     LParen,
+    Le,
+    Lt,
+    Minus,
+    Minus_Assign,
     Newline,
+    Plus,
+    Plus_Assign,
+    RBrace,
     RParen,
+    Return,
     Semi,
+    Shl,
+    StringLiteral,
+    Struct,
 };
 
 class token final {
   public:
-    using token_data = std::variant<std::monostate, bool, long, float, std::string, token_type>;
+    using token_data = std::variant<std::monostate, bool, long, double, std::string, token_type>;
+    using source_t = std::shared_ptr<const std::string>;
 
     token(const std::shared_ptr<std::string> & text, size_t position, size_t length,
           token_type type)
@@ -37,20 +58,24 @@ class token final {
         case token_type::Identifier:
             return text;
         case token_type::Int:
-            if (len < 3)
-                return std::stol(text);
+            if (len < 3) return std::stol(text);
             else if (tolower(text[1]) == 'x')
                 return std::stol(text, nullptr, 16);
             else if (tolower(text[1]) == 'b')
                 return std::stol(text, nullptr, 2);
             else
                 return std::stol(text, nullptr, 10);
+        case token_type ::StringLiteral:
+            return text;
         default:
             return tok_type;
         }
     }
 
     [[nodiscard]] token_type type() const noexcept { return tok_type; }
+    [[nodiscard]] auto start() const noexcept { return pos; }
+    [[nodiscard]] auto end() const noexcept { return pos + len; }
+    [[nodiscard]] source_t src() const noexcept { return src_text; }
 
   private:
     std::shared_ptr<const std::string> src_text;

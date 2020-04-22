@@ -3,6 +3,9 @@
 //
 
 #include "lexer.h"
+
+#include <algorithm>
+#include <fstream>
 #include <map>
 #include <sstream>
 
@@ -12,6 +15,12 @@ std::optional<token_type> keyword(const std::string & identifier) {
         keywords.emplace("int32", token_type::Int32);
         keywords.emplace("int64", token_type::Int64);
         keywords.emplace("const", token_type::Const);
+        keywords.emplace("func", token_type::Func);
+        keywords.emplace("if", token_type::If);
+        keywords.emplace("else", token_type::Else);
+        keywords.emplace("ret", token_type::Return);
+        keywords.emplace("return", token_type::Return);
+        keywords.emplace("or", token_type::Boolean_Or);
     }
 
     for (const auto & entry : keywords) {
@@ -27,7 +36,7 @@ std::optional<token_type> keyword(const std::string & identifier) {
 
 token lexer::next() {
 
-    // If we have a peeked value, we just return it
+    // If we have previously peeked, just return the peeked item.
     if (peeked.has_value()) {
         const auto to_ret = peeked.value();
         peeked.reset();
@@ -43,8 +52,7 @@ token lexer::next() {
         {
             std::ifstream file{filename};
             std::string temp;
-            while (std::getline(file, temp))
-                stream << temp << '\n';
+            while (std::getline(file, temp)) stream << temp << '\n';
         }
 
         // Store the data
@@ -60,8 +68,8 @@ token lexer::next() {
         // (mostly to help humans)
         const auto consume_whitespace = [&input_text, this] {
             const auto start = current_pos;
-            while (current_pos < input_text->size() and
-                   (input_text->at(current_pos) == ' ' or input_text->at(current_pos) == '\t'))
+            while (current_pos < input_text->size()
+                   and (input_text->at(current_pos) == ' ' or input_text->at(current_pos) == '\t'))
                 current_pos++;
 
             return start != current_pos;
@@ -91,13 +99,12 @@ token lexer::next() {
     current_pos++;
 
     if (isalpha(current_char)) {
-        while (isalnum(input_text->at(current_pos)))
-            current_pos++;
+        while (isalnum(input_text->at(current_pos))) current_pos++;
 
         const auto length = current_pos - start;
 
-        const auto tokentype =
-            keyword(input_text->substr(start, length)).value_or(token_type::Identifier);
+        const auto tokentype
+            = keyword(input_text->substr(start, length)).value_or(token_type::Identifier);
 
         return token{input_text, start, length, tokentype};
 
@@ -108,8 +115,7 @@ token lexer::next() {
             if (tolower(current_char) == 'x') {
                 // Eat hexadecimal literal
                 current_pos++;
-                while (isxdigit(input_text->at(current_pos)))
-                    current_pos++;
+                while (isxdigit(input_text->at(current_pos))) current_pos++;
 
                 return {input_text, start, current_pos - start, token_type::Int};
             } else if (tolower(current_char) == 'b') {
@@ -122,8 +128,7 @@ token lexer::next() {
             } else if (current_char == '.') {
                 // Eat float literal
                 current_pos++;
-                while (isdigit(input_text->at(current_pos)))
-                    current_pos++;
+                while (isdigit(input_text->at(current_pos))) current_pos++;
 
                 return {input_text, start, current_pos - start, token_type::Float};
             } else {
@@ -132,8 +137,7 @@ token lexer::next() {
             }
         } else {
             // Does not start on a zero
-            while (isdigit(input_text->at(current_pos)))
-                current_pos++;
+            while (isdigit(input_text->at(current_pos))) current_pos++;
 
             bool is_float = false;
             if (input_text->at(current_pos) == '.') {
@@ -141,14 +145,28 @@ token lexer::next() {
                 current_pos++;
 
                 // TODO: Remove trailing zeros
-                while (isdigit(input_text->at(current_pos)))
-                    current_pos++;
+                while (isdigit(input_text->at(current_pos))) current_pos++;
             }
 
             return {input_text, start, current_pos - start,
                     is_float ? token_type::Float : token_type::Int};
         }
 
+    } else if (current_char == '"') {
+        // Read in string literal
+        char last_char = '"';
+        bool done = false;
+        while (not done) {
+            while (current_pos < input_text->size() and input_text->at(current_pos) != '"') {
+                last_char = input_text->at(current_pos);
+                current_pos++;
+            }
+            if (last_char != '\\') {
+                current_pos++;
+                done = true;
+            }
+        }
+        return {input_text, start, current_pos - start, token_type ::StringLiteral};
     } else {
         switch (current_char) {
         case ';':
@@ -156,13 +174,53 @@ token lexer::next() {
         case ':':
             return {input_text, start, 1, token_type ::Colon};
         case '=':
-            return {input_text, start, 1, token_type ::Assign};
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != current_char)
+                return {input_text, start, 1, token_type ::Assign};
+            else {
+                current_pos++;
+                return {input_text, start, 2, token_type::Eq};
+            }
+        case '|':
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != current_char)
+                return {input_text, start, 1, token_type ::Bit_Or};
+            else {
+                current_pos++;
+                return {input_text, start, 2, token_type ::Boolean_Or};
+            }
+        case '<':
+            if (current_pos >= input_text->size()
+                or (input_text->at(current_pos) != current_char
+                    and input_text->at(current_pos) != '='))
+                return {input_text, start, 1, token_type ::Lt};
+            else if (input_text->at(current_pos) == current_char) {
+                current_pos++;
+                return {input_text, start, 2, token_type ::Shl};
+            } else {
+                current_pos++;
+                return {input_text, start, 2, token_type ::Le};
+            }
+        case '+':
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != '=')
+                return {input_text, start, 1, token_type ::Plus};
+            else
+                return {input_text, start, 2, token_type ::Plus_Assign};
+        case '-':
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != '=')
+                return {input_text, start, 1, token_type ::Minus};
+            else
+                return {input_text, start, 2, token_type ::Minus_Assign};
         case '\n':
             return {input_text, start, 1, token_type ::Newline};
         case '(':
             return {input_text, start, 1, token_type ::LParen};
         case ')':
             return {input_text, start, 1, token_type ::RParen};
+        case '{':
+            return {input_text, start, 1, token_type ::LBrace};
+        case '}':
+            return {input_text, start, 1, token_type ::RBrace};
+        case ',':
+            return {input_text, start, 1, token_type ::Comma};
         default:
             return {input_text, start, 1, token_type ::EndOfFile};
         }
@@ -172,8 +230,7 @@ token lexer::next() {
 token lexer::peek() {
 
     // If there is nothing peeked, we need to read the next token.
-    if (not peeked.has_value())
-        peeked = this->next();
+    if (not peeked.has_value()) peeked = this->next();
 
     return peeked.value();
 }

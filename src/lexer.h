@@ -5,13 +5,12 @@
 #ifndef NEW_J_COMPILER_LEXER_H
 #define NEW_J_COMPILER_LEXER_H
 
-#include <fstream>
+#include "token.h"
+
 #include <memory>
 #include <optional>
 #include <string>
 #include <variant>
-
-#include "token.h"
 
 class lexer final {
     using src_impl = std::variant<std::string, std::shared_ptr<std::string>>;

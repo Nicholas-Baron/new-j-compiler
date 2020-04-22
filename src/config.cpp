@@ -1,15 +1,18 @@
 
 #include "config.h"
+
 #include <iostream>
 
 [[nodiscard]] std::shared_ptr<const user_settings> parse_cmdline_args(int arg_count,
-                                                                     const char ** args) {
+                                                                      const char ** args) {
 
     user_settings settings;
 
     for (auto i = 1; i < arg_count; i++) {
         if (std::string arg{args[i]}; arg == "--help" or arg == "-h") {
             settings.print_help = true;
+        } else if (arg == "-fsyntax-tree") {
+            settings.print_syntax = true;
         } else if (arg.front() != '-') {
             settings.input_filename = arg;
         } else {
