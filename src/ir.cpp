@@ -5,6 +5,7 @@
 #include "ir.h"
 
 #include <algorithm>
+#include <ostream>
 
 namespace ir {
 
@@ -45,4 +46,52 @@ bool basic_block::terminated() {
             return false;
         }
 }
+
+std::ostream & operator<<(std::ostream & lhs, const operand & rhs) {
+    lhs << '(';
+    switch (rhs.type) {
+    case ir_type::unit:
+        lhs << "unit";
+        break;
+    case ir_type::boolean:
+        if (const auto * val = std::get_if<bool>(&rhs.data); val != nullptr)
+            lhs << "boolean imm. " << *val;
+        else
+            lhs << "boolean " << std::get<std::string>(rhs.data);
+        break;
+    case ir_type::str:
+        if (rhs.is_immediate) lhs << "string imm. " << std::get<std::string>(rhs.data);
+        else
+            lhs << "string " << std::get<std::string>(rhs.data);
+        break;
+    case ir_type::i32:
+        if (rhs.is_immediate) lhs << "i32 imm. " << std::get<long>(rhs.data);
+        else
+            lhs << "i32 " << std::get<std::string>(rhs.data);
+        break;
+    case ir_type::i64:
+        if (rhs.is_immediate) lhs << "i64 imm. " << std::get<long>(rhs.data);
+        else
+            lhs << "i64 " << std::get<std::string>(rhs.data);
+        break;
+    case ir_type::f32:
+        if (rhs.is_immediate) lhs << "f32 imm. " << std::get<double>(rhs.data);
+        else
+            lhs << "f32 " << std::get<std::string>(rhs.data);
+        break;
+    case ir_type::f64:
+        if (rhs.is_immediate) lhs << "f64 imm. " << std::get<double>(rhs.data);
+        else
+            lhs << "f64 " << std::get<std::string>(rhs.data);
+        break;
+    case ir_type::func:
+        lhs << "func " << std::get<std::string>(rhs.data);
+        break;
+    default:
+        lhs << "unknown type";
+        break;
+    }
+    return lhs << ')';
+}
+
 } // namespace ir

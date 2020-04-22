@@ -7,6 +7,7 @@
 
 #include <array>
 #include <functional>
+#include <iosfwd>
 #include <memory>
 #include <set>
 #include <string>
@@ -43,6 +44,9 @@ struct operand {
     std::variant<std::monostate, bool, long, double, std::string> data;
     ir_type type;
     bool is_immediate;
+
+  private:
+    friend std::ostream & operator<<(std::ostream & lhs, const operand & rhs);
 };
 
 struct three_address {

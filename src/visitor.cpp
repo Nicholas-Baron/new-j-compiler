@@ -314,27 +314,9 @@ void ir_gen_visitor::dump() const {
                         skip_first = true;
                     }
 
-                    // std::cout << static_cast<int>(inst.op) << ' ';
                     bool first = true;
                     for (const auto & operand : inst.operands)
-                        if (not first or (first and not skip_first)) switch (operand.data.index()) {
-                            case 1:
-                                std::cout << std::boolalpha << std::get<bool>(operand.data) << ' ';
-                                break;
-                            case 2:
-                                std::cout << std::get<long>(operand.data) << ' ';
-                                break;
-                            case 3:
-                                std::cout << std::get<double>(operand.data) << ' ';
-                                break;
-                            case 4:
-                                std::cout << std::get<std::string>(operand.data) << ' ';
-                                break;
-                            case 0:
-                            default:
-                                std::cout << "[UNK] ";
-                                break;
-                            }
+                        if (not first or (first and not skip_first)) std::cout << operand << ' ';
                         else
                             first = false;
                     std::cout << '\n';
