@@ -307,20 +307,7 @@ void ir_gen_visitor::dump() const {
             std::cout << func->name << '\n';
             for (const auto & block : func->body) {
                 std::cout << block->name << ":\n";
-                for (const auto & inst : block->contents) {
-                    bool skip_first = false;
-                    if (auto res = inst.result(); res) {
-                        std::cout << std::get<std::string>(res.value().data) << " = ";
-                        skip_first = true;
-                    }
-
-                    bool first = true;
-                    for (const auto & operand : inst.operands)
-                        if (not first or (first and not skip_first)) std::cout << operand << ' ';
-                        else
-                            first = false;
-                    std::cout << '\n';
-                }
+                for (const auto & inst : block->contents) std::cout << inst << '\n';
             }
         }
     });

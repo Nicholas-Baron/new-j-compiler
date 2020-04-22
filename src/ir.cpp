@@ -94,4 +94,95 @@ std::ostream & operator<<(std::ostream & lhs, const operand & rhs) {
     return lhs << ')';
 }
 
+std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
+    if (auto result = rhs.result(); result) lhs << result.value() << " = ";
+
+    switch (rhs.op) {
+    case operation::add:
+        return lhs << rhs.operands.at(1) << " + " << rhs.operands.at(2);
+    case operation::sub:
+        return lhs << rhs.operands.at(1) << " - " << rhs.operands.at(2);
+    case operation::mul:
+        return lhs << rhs.operands.at(1) << " * " << rhs.operands.at(2);
+    case operation::div:
+        return lhs << rhs.operands.at(1) << " / " << rhs.operands.at(2);
+    case operation::shift_left:
+        return lhs << rhs.operands.at(1) << " << " << rhs.operands.at(2);
+    case operation::shift_right:
+        return lhs << rhs.operands.at(1) << " >> " << rhs.operands.at(2);
+    case operation::bit_or:
+        return lhs << rhs.operands.at(1) << " | " << rhs.operands.at(2);
+    case operation::bit_and:
+        return lhs << rhs.operands.at(1) << " & " << rhs.operands.at(2);
+    case operation::bool_or:
+        return lhs << rhs.operands.at(1) << " || " << rhs.operands.at(2);
+    case operation::bool_and:
+        return lhs << rhs.operands.at(1) << " && " << rhs.operands.at(2);
+    case operation::compare_equal:
+        return lhs << rhs.operands.at(1) << " == " << rhs.operands.at(2);
+    case operation::compare:
+        return lhs << rhs.operands.at(1) << " < " << rhs.operands.at(2);
+    case operation::assign:
+        return lhs << rhs.operands.at(1) << " = " << rhs.operands.at(2);
+    case operation::halt:
+        lhs << "halt ";
+        if (not rhs.operands.empty()) lhs << rhs.operands.front();
+        break;
+    case operation::branch:
+        lhs << "branch ";
+        if (rhs.operands.size() == 1) return lhs << rhs.operands.front();
+        else
+            for (const auto & op : rhs.operands) lhs << op << ' ';
+
+        break;
+    case operation::call:
+        lhs << "call ";
+        if (rhs.result())
+            for (auto iter = rhs.operands.begin() + 1; iter != rhs.operands.end(); ++iter)
+                lhs << *iter << ' ';
+        else
+            for (const auto & op : rhs.operands) lhs << op;
+
+        break;
+    case operation::ret:
+        lhs << "ret ";
+        if (not rhs.operands.empty()) lhs << rhs.operands.front();
+        break;
+    case operation::load:
+        lhs << "load ";
+        for (auto iter = rhs.operands.begin() + 1; iter != rhs.operands.end(); ++iter)
+            lhs << *iter << ' ';
+        break;
+    case operation::store:
+        lhs << "store ";
+        for (const auto & op : rhs.operands) lhs << op << ' ';
+        break;
+    }
+
+    return lhs;
+}
+std::optional<operand> three_address::result() const {
+    if (operands.empty()) return {};
+
+    switch (op) {
+    case operation::add:
+    case operation::sub:
+    case operation::mul:
+    case operation::div:
+    case operation::shift_left:
+    case operation::shift_right:
+    case operation::bit_or:
+    case operation::bit_and:
+    case operation::bool_or:
+    case operation::bool_and:
+    case operation::compare_equal:
+    case operation::compare:
+    case operation::assign:
+    case operation::call:
+    case operation::load:
+        return std::optional{operands.front()};
+    default:
+        return {};
+    }
+}
 } // namespace ir

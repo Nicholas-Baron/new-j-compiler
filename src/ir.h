@@ -52,31 +52,10 @@ struct operand {
 struct three_address {
     operation op;
     std::vector<operand> operands;
-    [[nodiscard]] std::optional<operand> result() const {
-        if (operands.empty()) return {};
+    [[nodiscard]] std::optional<operand> result() const;
 
-        switch (op) {
-        case operation::add:
-        case operation::sub:
-        case operation::mul:
-        case operation::div:
-        case operation::shift_left:
-        case operation::shift_right:
-        case operation::bit_or:
-        case operation::bit_and:
-        case operation::bool_or:
-        case operation::bool_and:
-        case operation::compare_equal:
-        case operation::compare:
-        case operation::assign:
-        case operation::call:
-        case operation::load:
-        case operation::store:
-            return std::optional{operands.front()};
-        default:
-            return {};
-        }
-    }
+  private:
+    friend std::ostream & operator<<(std::ostream & lhs, const three_address & rhs);
 };
 
 struct basic_block {
