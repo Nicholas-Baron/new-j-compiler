@@ -129,6 +129,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
         visit(func.name);
         for (const auto & param : func.params) visit(param);
         visit(*func.body);
+        if (not func_ir->body.back()->terminated()) append_instruction({ir::operation ::ret, {}});
         this->active_variables.pop_back();
         this->current_func = nullptr;
     } break;
@@ -145,7 +146,9 @@ void ir_gen_visitor::visit(const ast::node & node) {
     } break;
     case ast::node_type ::statement_block:
         this->active_variables.emplace_back();
-        this->append_block(this->block_name());
+        if (not current_block()->contents.empty() and current_block()->terminated())
+            this->append_block(this->block_name());
+
         for (const auto & stmt : dynamic_cast<const ast::stmt_block &>(node).stmts) visit(*stmt);
         this->active_variables.pop_back();
         break;
