@@ -27,7 +27,7 @@ std::unique_ptr<ast::top_level> parser::parse_top_level() {
     case token_type ::Func:
         return this->parse_function();
     case token_type ::Const:
-        return this->parse_const_decl();
+        return this->parse_const_decl(true);
     case token_type ::Struct:
         // return this->parse_struct_decl();
     default:
@@ -68,6 +68,8 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
         return parse_identifier_stmt();
     case token_type ::If:
         return parse_if_stmt();
+    case token_type ::Const:
+        return parse_const_decl(false);
     case token_type ::Return:
         return parse_return_stmt();
     default:
@@ -347,7 +349,7 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
         return lhs;
     }
 }
-std::unique_ptr<ast::const_decl> parser::parse_const_decl() {
+std::unique_ptr<ast::var_decl> parser::parse_const_decl(bool global) {
     if (consume().type() != token_type::Const) {
         std::cerr << "A const declaration can only start with const\n";
         return nullptr;
@@ -360,7 +362,9 @@ std::unique_ptr<ast::const_decl> parser::parse_const_decl() {
         return nullptr;
     }
 
-    return std::make_unique<ast::const_decl>(std::move(ident), parse_expression(), true);
+    return std::make_unique<ast::var_decl>(std::move(ident), parse_expression(),
+                                           global ? ast::var_decl::details::GlobalConst
+                                                  : ast::var_decl::details::Const);
 }
 ast::opt_typed parser::parse_opt_typed() {
     auto ident = consume();

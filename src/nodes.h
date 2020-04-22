@@ -30,7 +30,7 @@ class program final {
     std::vector<std::unique_ptr<top_level>> items{};
 };
 
-class node {
+struct node {
   public:
     constexpr node() noexcept = default;
 
@@ -42,7 +42,6 @@ class node {
 
     virtual ~node() noexcept = default;
 
-    virtual void accept(visitor &) {}
     [[nodiscard]] virtual ast::node_type type() const noexcept = 0;
 
     // Functions to help with debug printing
@@ -58,13 +57,11 @@ class node {
 };
 
 // Intermediate classes
-class expression : public ast::node {
-  public:
+struct expression : public virtual ast::node {
     [[nodiscard]] virtual bool has_children() const noexcept = 0;
 };
-class statement : public ast::node {};
-class top_level : public ast::node {
-  public:
+struct statement : public virtual ast::node {};
+struct top_level : public virtual ast::node {
     [[nodiscard]] virtual std::string identifier() const = 0;
 };
 
@@ -83,7 +80,12 @@ class opt_typed final : public ast::node {
         return written_type.has_value() ? written_type.value().end() : ident.end();
     }
 
-    [[nodiscard]] auto user_typed() const noexcept { return written_type.has_value(); }
+    [[nodiscard]] bool user_typed() const noexcept { return written_type.has_value(); }
+    [[nodiscard]] bool user_defined_type() const noexcept {
+        return user_typed() and written_type.value().type() == token_type::Identifier;
+    }
+
+    [[nodiscard]] token type_data() const { return written_type.value(); }
 
   private:
     token ident;
@@ -92,8 +94,7 @@ class opt_typed final : public ast::node {
 
 // Top level items
 
-class parameter final : public ast::node {
-  public:
+struct parameter final : public ast::node {
     parameter(token && name, token && type) : name{std::move(name)}, val_type{std::move(type)} {}
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::parameter; }
@@ -103,22 +104,14 @@ class parameter final : public ast::node {
 
     [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
 
-  private:
     token name, val_type;
 };
 
-class function final : public ast::top_level {
-  public:
+struct function final : public ast::top_level {
     function(token && name, std::vector<parameter> params, std::optional<token> && return_type,
              std::unique_ptr<ast::statement> body)
         : name{std::move(name), std::move(return_type)}, params{std::move(params)}, body{std::move(
                                                                                         body)} {}
-
-    void accept(visitor & v) final {
-        v.visit(name);
-        for (auto & param : params) v.visit(param);
-        v.visit(*body);
-    }
 
     [[nodiscard]] std::string identifier() const final { return name.name(); }
 
@@ -127,7 +120,6 @@ class function final : public ast::top_level {
     [[nodiscard]] size_t end_pos() const noexcept final { return body->end_pos(); }
     [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
 
-  private:
     opt_typed name;
     std::vector<ast::parameter> params;
     std::unique_ptr<ast::statement> body;
@@ -135,16 +127,11 @@ class function final : public ast::top_level {
 
 // Statements
 
-class stmt_block final : public ast::statement {
-  public:
+struct stmt_block final : public ast::statement {
     explicit stmt_block(token && start) : start{std::move(start)} {}
 
     void append(std::unique_ptr<ast::statement> stmt) { stmts.push_back(std::move(stmt)); }
     void terminate(token && ender) { end = ender; }
-
-    void accept(visitor & v) final {
-        for (auto & stmt : stmts) v.visit(*stmt);
-    }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::statement_block; }
     [[nodiscard]] size_t start_pos() const noexcept final { return start.start(); }
@@ -155,24 +142,16 @@ class stmt_block final : public ast::statement {
 
     [[nodiscard]] token::source_t src() const noexcept final { return start.src(); }
 
-  private:
     token start;
     std::vector<std::unique_ptr<ast::statement>> stmts;
     std::optional<token> end;
 };
 
-class if_stmt final : public ast::statement {
-  public:
+struct if_stmt final : public ast::statement {
     if_stmt(std::unique_ptr<expression> condition, std::unique_ptr<statement> then_block,
             std::unique_ptr<statement> else_block = nullptr)
         : cond{std::move(condition)}, then_block{std::move(then_block)}, else_block{std::move(
                                                                              else_block)} {}
-
-    void accept(visitor & v) override {
-        v.visit(*cond);
-        v.visit(*then_block);
-        if (else_block != nullptr) v.visit(*else_block);
-    }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::if_statement; }
     [[nodiscard]] size_t start_pos() const noexcept final { return cond->start_pos(); }
@@ -181,20 +160,14 @@ class if_stmt final : public ast::statement {
     }
     [[nodiscard]] token::source_t src() const noexcept final { return cond->src(); }
 
-  private:
     std::unique_ptr<ast::expression> cond;
     std::unique_ptr<ast::statement> then_block;
     std::unique_ptr<ast::statement> else_block;
 };
 
-class ret_stmt final : public ast::statement {
-  public:
+struct ret_stmt final : public ast::statement {
     explicit ret_stmt(token && ret, std::unique_ptr<expression> value = nullptr)
         : ret{std::move(ret)}, value{std::move(value)} {}
-
-    void accept(visitor & v) final {
-        if (value != nullptr) v.visit(*value);
-    }
 
     [[nodiscard]] ast::node_type type() const noexcept final {
         return node_type ::return_statement;
@@ -205,21 +178,14 @@ class ret_stmt final : public ast::statement {
     }
     [[nodiscard]] token::source_t src() const noexcept final { return ret.src(); }
 
-  private:
     token ret;
     std::unique_ptr<ast::expression> value;
 };
 
-class func_call final : public ast::statement, public ast::expression {
-  public:
+struct func_call final : public ast::statement, public ast::expression {
     func_call(std::unique_ptr<expression> callee,
               std::vector<std::unique_ptr<ast::expression>> && args)
         : func_name{std::move(callee)}, arguments{std::move(args)} {}
-
-    void accept(visitor & v) final {
-        v.visit(*func_name);
-        for (auto & arg : arguments) v.visit(*arg);
-    }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::func_call; }
     [[nodiscard]] size_t start_pos() const noexcept final { return func_name->start_pos(); }
@@ -231,38 +197,36 @@ class func_call final : public ast::statement, public ast::expression {
 
     [[nodiscard]] bool has_children() const noexcept final { return not arguments.empty(); }
 
-  private:
+    [[nodiscard]] ast::expression * name() const noexcept { return func_name.get(); }
+
     std::unique_ptr<ast::expression> func_name;
     std::vector<std::unique_ptr<ast::expression>> arguments;
 };
 
-class const_decl final : public ast::top_level, public ast::statement {
+struct var_decl final : public ast::top_level, public ast::statement {
   public:
-    const_decl(opt_typed && ident, std::unique_ptr<expression> expr, bool is_global)
-        : name{std::move(ident)}, val{std::move(expr)}, global{is_global} {}
-
-    void accept(visitor & v) final { v.visit(*val); }
+    enum class details { Let, Const, GlobalConst };
+    var_decl(opt_typed && ident, std::unique_ptr<expression> expr, details detail)
+        : name{std::move(ident)}, val{std::move(expr)}, detail{detail} {}
 
     [[nodiscard]] std::string identifier() const final { return name.name(); }
 
-    [[nodiscard]] node_type type() const noexcept final { return node_type ::const_decl; }
+    [[nodiscard]] node_type type() const noexcept final { return node_type ::var_decl; }
     [[nodiscard]] size_t start_pos() const noexcept final { return name.start_pos(); }
     [[nodiscard]] size_t end_pos() const noexcept final { return val->end_pos(); }
     [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
 
-    [[nodiscard]] bool in_global_scope() const noexcept { return global; }
+    [[nodiscard]] bool in_global_scope() const noexcept { return detail == details::GlobalConst; }
 
     [[nodiscard]] expression * value_expr() const noexcept { return val.get(); }
 
-  private:
     opt_typed name;
     std::unique_ptr<expression> val;
-    bool global;
+    details detail;
 };
 
 // Expressions
-class literal_or_variable final : public ast::expression {
-  public:
+struct literal_or_variable final : public ast::expression {
     explicit literal_or_variable(token && val) : val{std::move(val)} {}
 
     literal_or_variable(const literal_or_variable & src) : val{src.val} {}
@@ -277,24 +241,19 @@ class literal_or_variable final : public ast::expression {
 
     [[nodiscard]] token::token_data data() const { return val.get_data(); }
 
-  private:
     token val;
+
+  private:
     friend std::ostream & operator<<(std::ostream & lhs, const literal_or_variable & rhs) {
         return lhs << rhs.val;
     }
 };
 
-class bin_op final : public ast::expression {
-  public:
+struct bin_op final : public ast::expression {
     enum class operation { add, sub, mult, div, boolean_and, boolean_or, le, lt, gt, ge, eq };
 
     bin_op(std::unique_ptr<expression> lhs, operation op, std::unique_ptr<expression> rhs)
         : lhs{std::move(lhs)}, op{op}, rhs{std::move(rhs)} {}
-
-    void accept(visitor & v) final {
-        v.visit(*lhs);
-        v.visit(*rhs);
-    }
 
     [[nodiscard]] ast::node_type type() const noexcept final { return node_type ::binary_op; }
     [[nodiscard]] size_t start_pos() const noexcept final { return lhs->start_pos(); }
@@ -306,7 +265,9 @@ class bin_op final : public ast::expression {
 
     [[nodiscard]] operation oper() const noexcept { return op; }
 
-  private:
+    [[nodiscard]] expression & lhs_ref() const noexcept { return *lhs; }
+    [[nodiscard]] expression & rhs_ref() const noexcept { return *rhs; }
+
     std::unique_ptr<expression> lhs;
     operation op;
     std::unique_ptr<expression> rhs;

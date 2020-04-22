@@ -34,7 +34,7 @@ class parser final {
     std::unique_ptr<ast::function> parse_function();
     std::vector<ast::parameter> parse_params();
 
-    std::unique_ptr<ast::const_decl> parse_const_decl();
+    std::unique_ptr<ast::var_decl> parse_const_decl(bool global);
     ast::opt_typed parse_opt_typed();
 
     // Statements

@@ -32,5 +32,9 @@ int main(const int arg_count, const char ** args) {
             program->visit([&](auto & node) { pv.visit(node); });
             std::cout << "Visited " << pv.visited_count() << " nodes" << std::endl;
         }
+
+        ir_gen_visitor ir_gen{};
+        program->visit([&](auto & node) { ir_gen.visit(node); });
+        ir_gen.dump();
     }
 }
