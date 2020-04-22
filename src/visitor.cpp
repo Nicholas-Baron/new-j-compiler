@@ -150,7 +150,13 @@ void ir_gen_visitor::visit(const ast::node & node) {
         this->active_variables.pop_back();
         break;
     case ast::node_type ::func_call: {
+        auto & func_call = dynamic_cast<const ast::func_call &>(node);
 
+        std::vector<ir::operand> args;
+        args.push_back(eval_ast(*func_call.func_name));
+        for (const auto & arg : func_call.arguments) args.push_back(eval_ast(*arg));
+
+        append_instruction({ir::operation ::call, args});
     } break;
     case ast::node_type ::parameter: {
         auto & param = dynamic_cast<const ast::parameter &>(node);
@@ -334,6 +340,9 @@ std::string ir_gen_visitor::block_name() {
 }
 
 ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
+    static std::map<std::string, ir::operand> builtins{
+        {"print", {std::string{"print"}, ir::ir_type ::func, true}}};
+
     switch (expr.type()) {
     case ast::node_type::binary_op: {
         auto & bin = dynamic_cast<const ast::bin_op &>(expr);
@@ -428,12 +437,16 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         switch (value.val.type()) {
         case token_type ::Int:
             return {std::get<long>(value.data()), ir::ir_type ::i32, true};
-        case token_type ::Identifier:
-            if (auto oper = read_variable(std::get<std::string>(value.data())); oper)
-                return oper.value();
+        case token_type ::Identifier: {
+            auto name = std::get<std::string>(value.data());
+            if (auto oper = read_variable(name); oper) return oper.value();
+            else if (auto iter = builtins.find(name); iter != builtins.end())
+                return iter->second;
             else
                 std::cerr << "Variable " << value.val << " does not exist\n";
-            break;
+        } break;
+        case token_type ::StringLiteral:
+            return {std::get<std::string>(value.data()), ir::ir_type ::str, true};
         default:
             std::cerr << "Cannot get value from " << value.text() << '\n';
         }

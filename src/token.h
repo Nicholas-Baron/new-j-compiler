@@ -65,6 +65,8 @@ class token final {
                 return std::stol(text, nullptr, 2);
             else
                 return std::stol(text, nullptr, 10);
+        case token_type ::StringLiteral:
+            return text;
         default:
             return tok_type;
         }

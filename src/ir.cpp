@@ -141,7 +141,7 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
             for (auto iter = rhs.operands.begin() + 1; iter != rhs.operands.end(); ++iter)
                 lhs << *iter << ' ';
         else
-            for (const auto & op : rhs.operands) lhs << op;
+            for (const auto & op : rhs.operands) lhs << op << ' ';
 
         break;
     case operation::ret:
@@ -165,6 +165,11 @@ std::optional<operand> three_address::result() const {
     if (operands.empty()) return {};
 
     switch (op) {
+
+    case operation::call:
+        if (operands.front().type == ir::ir_type::func) return {};
+        else
+            [[fallthrough]];
     case operation::add:
     case operation::sub:
     case operation::mul:
@@ -178,9 +183,9 @@ std::optional<operand> three_address::result() const {
     case operation::compare_equal:
     case operation::compare:
     case operation::assign:
-    case operation::call:
     case operation::load:
         return std::optional{operands.front()};
+
     default:
         return {};
     }
