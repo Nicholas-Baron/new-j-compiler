@@ -369,6 +369,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
             return {0l, ir::ir_type ::i32, true};
         }
 
+        // TODO: rewrite into function
         switch (bin.oper()) {
         case ast::bin_op::operation::add:
             append_instruction({ir::operation ::add, {{temp_name(), lhs.type, false}, lhs, rhs}});
@@ -378,11 +379,11 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
             break;
         case ast::bin_op::operation::le:
             append_instruction(
-                {ir::operation ::compare, {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
+                {ir::operation ::le, {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
             break;
         case ast::bin_op::operation::eq:
-            append_instruction({ir::operation ::compare_equal,
-                                {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
+            append_instruction(
+                {ir::operation ::eq, {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
             break;
         case ast::bin_op::operation::boolean_or:
             if (lhs.type != ir::ir_type::boolean) return {false, ir::ir_type ::boolean, false};

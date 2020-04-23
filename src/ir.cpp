@@ -117,10 +117,12 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
         return lhs << rhs.operands.at(1) << " || " << rhs.operands.at(2);
     case operation::bool_and:
         return lhs << rhs.operands.at(1) << " && " << rhs.operands.at(2);
-    case operation::compare_equal:
+    case operation::eq:
         return lhs << rhs.operands.at(1) << " == " << rhs.operands.at(2);
-    case operation::compare:
+    case operation::lt:
         return lhs << rhs.operands.at(1) << " < " << rhs.operands.at(2);
+    case operation::le:
+        return lhs << rhs.operands.at(1) << " <= " << rhs.operands.at(2);
     case operation::assign:
         return lhs << rhs.operands.at(1) << " = " << rhs.operands.at(2);
     case operation::halt:
@@ -156,6 +158,8 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
         lhs << "store ";
         for (const auto & op : rhs.operands) lhs << op << ' ';
         break;
+    default:
+        lhs << "Unimplemented operation";
     }
 
     return lhs;
@@ -179,8 +183,12 @@ std::optional<operand> three_address::result() const {
     case operation::bit_and:
     case operation::bool_or:
     case operation::bool_and:
-    case operation::compare_equal:
-    case operation::compare:
+    case operation::lt:
+    case operation ::le:
+    case operation ::gt:
+    case operation ::ge:
+    case operation::eq:
+    case operation ::ne:
     case operation::assign:
     case operation::load:
         return std::optional{operands.front()};
