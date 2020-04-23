@@ -10,6 +10,7 @@
 namespace ir {
 
 bool program::function_exists(const std::string & name, size_t param_count) const noexcept {
+
     return std::find_if(this->program.begin(), this->program.end(),
                         [&](const auto & func) -> bool {
                             return func->name == name and func->parameters.size() == param_count;
@@ -17,14 +18,12 @@ bool program::function_exists(const std::string & name, size_t param_count) cons
            != this->program.end();
 }
 
-function * program::register_function(const std::string & name) {
+function * program::register_function(const std::string & name, size_t param_count) {
 
-    auto ptr = std::make_unique<ir::function>();
-    auto * to_ret = ptr.get();
-    program.insert(std::move(ptr));
+    if (this->function_exists(name, param_count)) return lookup_function(name, param_count);
 
-    to_ret->name = name;
-    return to_ret;
+    program.push_back(std::make_unique<ir::function>(name));
+    return program.back().get();
 }
 function * program::lookup_function(const std::string & name, size_t param_count) const noexcept {
     if (not this->function_exists(name, param_count)) return nullptr;

@@ -5,11 +5,9 @@
 #ifndef NEW_J_COMPILER_IR_H
 #define NEW_J_COMPILER_IR_H
 
-#include <array>
 #include <functional>
 #include <iosfwd>
 #include <memory>
-#include <set>
 #include <string>
 #include <variant>
 #include <vector>
@@ -67,6 +65,8 @@ struct basic_block {
 };
 
 struct function {
+    explicit function(std::string name) : name{std::move(name)} {}
+
     std::string name;
     std::vector<operand> parameters;
     std::vector<std::unique_ptr<basic_block>> body;
@@ -78,14 +78,14 @@ class program {
     [[nodiscard]] bool function_exists(const std::string & name, size_t param_count) const noexcept;
     [[nodiscard]] function * lookup_function(const std::string & name, size_t param_count) const
         noexcept;
-    [[nodiscard]] function * register_function(const std::string & name);
+    [[nodiscard]] function * register_function(const std::string & name, size_t param_count);
 
     void for_each_func(const std::function<void(ir::function *)> & visitor) const {
         for (const auto & func : program) visitor(func.get());
     }
 
   private:
-    std::set<std::unique_ptr<ir::function>> program;
+    std::vector<std::unique_ptr<ir::function>> program;
 };
 
 } // namespace ir

@@ -122,7 +122,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
         break;
     case ast::node_type ::function: {
         auto & func = dynamic_cast<const ast::function &>(node);
-        auto * func_ir = this->prog.register_function(func.identifier());
+        auto * func_ir = this->prog.register_function(func.identifier(), func.params.size());
         this->current_func = func_ir;
         this->append_block(current_func->name + "_entry");
         this->active_variables.emplace_back();
