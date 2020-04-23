@@ -1,6 +1,7 @@
 
 #include "config.h"
 #include "lexer.h"
+#include "nodes.h"
 #include "parser.h"
 #include "visitor.h"
 

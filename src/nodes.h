@@ -7,12 +7,10 @@
 
 #include "node_forward.h"
 #include "token.h"
-#include "visitor.h"
 
 #include <functional>
 #include <memory>
 #include <optional>
-#include <utility>
 #include <vector>
 
 namespace ast {

@@ -38,6 +38,7 @@ struct top_level;
 // function related
 struct function;
 struct parameter;
+struct func_call;
 
 // declarations
 struct var_decl;
@@ -45,6 +46,7 @@ struct var_decl;
 // Statements
 struct if_stmt;
 struct ret_stmt;
+struct stmt_block;
 
 // expressions
 struct bin_op;
