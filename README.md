@@ -1,11 +1,29 @@
 # New-J-Compiler
-A Compiler for the New-J programming language
+
+## Examples
+
+Basic Hello World
+```
+func main print("Hello World")
+```
+
+Recursive Fibonacci
+```
+func fib(n : int32) : int64
+    if (n <= 1) {
+        ret n
+    } else {
+        return fib(n - 1) + fib(n - 2)
+    }
+```
 
 ## Status
 
 Current features:
-- `if` w/o `else`
+- `if` with or without `else`
+- function calls
 - printable syntax tree
+  - `-fsyntax-tree` in the command line
 - printable intermediate representation "IR"
 
 ## Goals
