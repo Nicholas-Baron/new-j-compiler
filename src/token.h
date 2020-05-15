@@ -6,6 +6,7 @@
 #define TOKEN_H
 
 #include <memory>
+#include <string>
 #include <variant>
 
 enum struct token_type {
