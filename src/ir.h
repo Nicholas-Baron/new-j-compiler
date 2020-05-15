@@ -79,9 +79,11 @@ struct function {
 
 class program {
   public:
+    [[nodiscard]] bool function_exists(const std::string & name) const noexcept;
     [[nodiscard]] bool function_exists(const std::string & name, size_t param_count) const noexcept;
-    [[nodiscard]] function * lookup_function(const std::string & name, size_t param_count) const
-        noexcept;
+    [[nodiscard]] function * lookup_function(const std::string & name) const noexcept;
+    [[nodiscard]] function * lookup_function(const std::string & name,
+                                             size_t param_count) const noexcept;
     [[nodiscard]] function * register_function(const std::string & name, size_t param_count);
 
     void for_each_func(const std::function<void(ir::function *)> & visitor) const {
