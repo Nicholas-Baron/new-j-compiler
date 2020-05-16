@@ -173,6 +173,11 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
         lhs << "store ";
         for (const auto & op : rhs.operands) lhs << op << ' ';
         break;
+    case operation::phi:
+        lhs << "phi ";
+        for (auto iter = rhs.operands.begin() + 1; iter != rhs.operands.end(); ++iter)
+            lhs << *iter << ' ';
+        break;
     default:
         lhs << "Unimplemented operation";
     }
@@ -206,6 +211,7 @@ std::optional<operand> three_address::result() const {
     case operation ::ne:
     case operation::assign:
     case operation::load:
+    case operation::phi:
         return std::optional{operands.front()};
 
     default:

@@ -21,7 +21,7 @@ enum struct operation {
     bit_or,
     bool_and,
     bool_or,
-    branch,
+    branch, // format: condition true_case false_case
     call,
     div,
     eq,
@@ -33,6 +33,7 @@ enum struct operation {
     lt,
     mul,
     ne,
+    phi,
     ret,
     shift_left,
     shift_right,

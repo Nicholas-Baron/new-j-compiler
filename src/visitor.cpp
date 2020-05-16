@@ -362,33 +362,43 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
     case ast::node_type::binary_op: {
         auto & bin = dynamic_cast<const ast::bin_op &>(expr);
         auto lhs = eval_ast(bin.lhs_ref());
-        auto rhs = eval_ast(bin.rhs_ref());
 
-        if (lhs.type != rhs.type) {
-            std::cerr << "Unable to do ir operation on different types\n";
-            return {0l, ir::ir_type ::i32, true};
-        }
+        // TODO: Make the ast do type checking
+        // TODO: Modularize
 
-        // TODO: rewrite into function
         switch (bin.oper()) {
         case ast::bin_op::operation::add:
-            append_instruction({ir::operation ::add, {{temp_name(), lhs.type, false}, lhs, rhs}});
+            append_instruction({ir::operation ::add,
+                                {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())}});
             break;
         default:
             std::cerr << "Unimplemented operation: " << expr.text() << '\n';
             break;
         case ast::bin_op::operation::le:
             append_instruction(
-                {ir::operation ::le, {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
+                {ir::operation ::le,
+                 {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())}});
             break;
         case ast::bin_op::operation::eq:
             append_instruction(
-                {ir::operation ::eq, {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
+                {ir::operation ::eq,
+                 {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())}});
             break;
         case ast::bin_op::operation::boolean_or:
             if (lhs.type != ir::ir_type::boolean) return {false, ir::ir_type ::boolean, false};
-            append_instruction(
-                {ir::operation ::bool_or, {{temp_name(), ir::ir_type ::boolean, false}, lhs, rhs}});
+            else {
+                auto false_block_name = block_name();
+                auto true_block_name = block_name();
+                append_instruction({ir::operation::branch,
+                                    {lhs,
+                                     {true_block_name, ir::ir_type::str, false},
+                                     {false_block_name, ir::ir_type::str, false}}});
+                append_block(std::move(false_block_name));
+                auto rhs_val = eval_ast(bin.rhs_ref());
+                append_block(std::move(true_block_name));
+                append_instruction({ir::operation::phi,
+                                    {{temp_name(), ir::ir_type::boolean, false}, lhs, rhs_val}});
+            }
             break;
             /*
         case ast::bin_op::operation::sub:
@@ -468,7 +478,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         }
     } break;
     default:
-        std::cerr << expr.text() << " cannot be evaluated.\n";
+        std::cerr << expr.text() << " cannot be evaluated." << std::endl;
         return {0l, ir::ir_type ::i32, true};
     }
     return current_block()->contents.back().result().value();
