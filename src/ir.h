@@ -80,6 +80,16 @@ struct function {
 
 class program {
   public:
+    explicit program() = default;
+
+    program(const program &) = delete;
+    program & operator=(const program &) = delete;
+
+    program(program &&) noexcept = default;
+    program & operator=(program &&) noexcept = default;
+
+    ~program() noexcept = default;
+
     [[nodiscard]] bool function_exists(const std::string & name) const noexcept;
     [[nodiscard]] bool function_exists(const std::string & name, size_t param_count) const noexcept;
     [[nodiscard]] function * lookup_function(const std::string & name) const noexcept;
