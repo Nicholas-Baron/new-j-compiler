@@ -24,6 +24,7 @@ add_executable(new_jc
         src/program.cpp
         src/visitor.cpp
         src/ir.cpp
+        src/bytecode.cpp
         )
 
 set_property(TARGET new_jc PROPERTY CXX_STANDARD 17)

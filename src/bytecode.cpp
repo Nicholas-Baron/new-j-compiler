@@ -1,0 +1,278 @@
+//
+// Created by nick on 5/15/20.
+//
+
+#include "bytecode.h"
+
+#include <iostream>
+
+namespace bytecode {
+std::optional<program> program::from_ir(const ir::program & input) {
+
+    auto * main_func = input.lookup_function("main");
+    if (main_func == nullptr) return {};
+
+    bytecode::program output{};
+    output.generate_bytecode(*main_func);
+
+    input.for_each_func([&output, main_func](auto * func) {
+        if (func != main_func and func != nullptr) output.generate_bytecode(*func);
+    });
+
+    return output;
+}
+
+operation::reg_with_imm make_reg_with_imm(uint8_t dest, uint8_t src, uint32_t imm) {
+    return {{dest, src}, imm};
+}
+
+constexpr auto mask_low_32_bit = 0xFFFFFFFFul;
+
+std::pair<operation, operation> load_64_bits(uint8_t dest, uint64_t val) {
+    auto first = operation{opcode::lui, make_reg_with_imm(dest, 0, val >> 32u)};
+    auto second = operation{opcode::ori, make_reg_with_imm(dest, dest, val & mask_low_32_bit)};
+    return std::make_pair(first, second);
+}
+
+void program::generate_bytecode(const ir::function & function) {
+
+    labels.emplace(function.name, text_end);
+
+    constexpr uint8_t temp_start = 20;
+    constexpr uint8_t temp_end = 61;
+    uint8_t next_reg = temp_start;
+    std::map<std::string, uint8_t> register_alloc;
+    const auto allocate_register = [&](std::string name) {
+        if (next_reg >= temp_end) std::cerr << "Too many temporaries\n";
+        register_alloc.insert_or_assign(std::move(name), next_reg++);
+    };
+
+    const auto allocate_operand = [&allocate_register](const ir::operand & op) {
+        allocate_register(std::get<std::string>(op.data));
+    };
+
+    for (auto & block : function.body) {
+        for (const auto & inst : block->contents)
+            if (auto res = inst.result(); res.has_value()) allocate_operand(res.value());
+    }
+
+    const auto get_register
+        = [&register_alloc](const std::string & name) { return register_alloc.at(name); };
+
+    // Parameters start at 13 and end at 19
+    constexpr auto max_inputs = (19 - 13) + 1;
+    if (auto param_num = 13; function.parameters.size() <= max_inputs)
+        for (auto & param : function.parameters)
+            register_alloc.emplace(std::get<std::string>(param.data), param_num++);
+    else {
+        // Too many parameters were declared
+        std::cerr << "Function " << function.name << " has more than " << max_inputs
+                  << " parameters.\n"
+                     "Currently, "
+                  << function.parameters.size() << " parameter functions are not supported.\n";
+        labels.erase(function.name);
+        return;
+    }
+
+    for (auto & block : function.body) {
+        labels.emplace(block->name, text_end);
+        for (auto & instruction : block->contents) {
+            auto res = instruction.result();
+            if (res.has_value()) allocate_register(std::get<std::string>(res.value().data));
+
+            operation next_op{};
+            switch (instruction.op) {
+            case ir::operation::add: {
+                auto lhs = instruction.operands.at(1);
+                auto rhs = instruction.operands.at(2);
+                auto result_reg = get_register(std::get<std::string>(res.value().data));
+                if (lhs.is_immediate and rhs.is_immediate) {
+                    auto & lhs_value = std::get<long>(lhs.data);
+                    auto & rhs_value = std::get<long>(rhs.data);
+                    if (lhs_value >= INT64_MAX - rhs_value) {
+                        std::cerr << "Detected integer overflow of " << lhs << " + " << rhs << '\n';
+                    }
+                    if (lhs_value + rhs_value <= INT32_MAX) {
+                        // Just ori
+                        next_op.code = opcode::ori;
+                        next_op.data = make_reg_with_imm(
+                            result_reg, 0, static_cast<uint32_t>(lhs_value + rhs_value));
+                    } else {
+                        // Lui + ori
+                        std::cerr << "Lui + ori combo for loading 64 bit is not implemented.\n";
+                    }
+                } else if (lhs.is_immediate and not rhs.is_immediate) {
+                    // ori lhs + add rhs
+                    bytecode.push_back(
+                        {opcode::ori,
+                         make_reg_with_imm(result_reg, 0,
+                                           static_cast<uint32_t>(std::get<long>(lhs.data)))});
+                    text_end += 8;
+
+                    next_op.code = opcode::add;
+                    auto rhs_reg = get_register(std::get<std::string>(rhs.data));
+                    next_op.data = std::array{result_reg, result_reg, rhs_reg};
+                } else if (rhs.is_immediate and not lhs.is_immediate) {
+                    // ori rhs + add lhs
+                    bytecode.push_back(
+                        {opcode::ori,
+                         make_reg_with_imm(result_reg, 0,
+                                           static_cast<uint32_t>(std::get<long>(rhs.data)))});
+                    text_end += 8;
+
+                    next_op.code = opcode::add;
+                    auto lhs_reg = get_register(std::get<std::string>(lhs.data));
+                    next_op.data = std::array{result_reg, result_reg, lhs_reg};
+                } else {
+                    // both are not immediates
+                    // simple add
+
+                    next_op.code = opcode::add;
+
+                    auto lhs_reg = get_register(std::get<std::string>(lhs.data));
+                    auto rhs_reg = get_register(std::get<std::string>(rhs.data));
+                    next_op.data = std::array{result_reg, lhs_reg, rhs_reg};
+                }
+
+            } break;
+            case ir::operation::assign: {
+                auto result_reg = get_register(std::get<std::string>(res.value().data));
+                auto src = instruction.operands.back();
+                if (src.is_immediate) {
+                    switch (src.type) {
+                    case ir::ir_type::str: {
+                        auto [first, second] = load_64_bits(
+                            result_reg, append_data(std::get<std::string>(src.data)));
+                        bytecode.push_back(first);
+                        text_end += 8;
+                        next_op = second;
+                    } break;
+                    case ir::ir_type::i32:
+                        next_op.code = opcode::ori;
+                        next_op.data = make_reg_with_imm(
+                            result_reg, 0, static_cast<uint32_t>(std::get<long>(src.data)));
+                        break;
+                    case ir::ir_type::i64: {
+                        auto [first, second] = load_64_bits(result_reg, std::get<long>(src.data));
+                        bytecode.push_back(first);
+                        text_end += 8;
+                        next_op = second;
+                    } break;
+                    default:
+                        std::cerr << "Cannot use " << src << " as the rhs of an assignment.\n";
+                        break;
+                    }
+                }
+            } break;
+            case ir::operation::bit_or: {
+                auto lhs = instruction.operands.at(1);
+                auto rhs = instruction.operands.at(2);
+                auto result_reg = get_register(std::get<std::string>(res.value().data));
+                if (lhs.is_immediate and rhs.is_immediate) {
+                    uint64_t val = std::get<long>(lhs.data) | std::get<long>(rhs.data);
+                    if (val >= UINT32_MAX) {
+
+                        bytecode.push_back(
+                            {opcode::lui, make_reg_with_imm(result_reg, 0, val >> 32u)});
+                        text_end += 8;
+                        val &= mask_low_32_bit;
+                    }
+
+                    next_op.code = opcode::ori;
+                    next_op.data = make_reg_with_imm(result_reg, result_reg, val);
+
+                } else if (rhs.is_immediate and not lhs.is_immediate) {
+                    auto lhs_reg = get_register(std::get<std::string>(lhs.data));
+                    next_op.code = opcode::ori;
+                    next_op.data = make_reg_with_imm(result_reg, lhs_reg, std::get<long>(rhs.data));
+                } else if (lhs.is_immediate and not rhs.is_immediate) {
+                    auto rhs_reg = get_register(std::get<std::string>(rhs.data));
+                    next_op.code = opcode::ori;
+                    next_op.data = make_reg_with_imm(result_reg, rhs_reg, std::get<long>(lhs.data));
+                } else {
+                    next_op.code = opcode::or_;
+                    auto lhs_reg = get_register(std::get<std::string>(lhs.data));
+                    auto rhs_reg = get_register(std::get<std::string>(rhs.data));
+                    next_op.data = std::array{result_reg, lhs_reg, rhs_reg};
+                }
+            } break;
+
+            case ir::operation::halt:
+                next_op.code = opcode::syscall;
+                next_op.data = make_reg_with_imm(
+                    get_register(std::get<std::string>(res.value().data)), 0, 0);
+                break;
+
+            case ir::operation::ret:
+                next_op.code = opcode::jr;
+                next_op.data = std::array<uint8_t, 3>{63, 0, 0};
+                break;
+            case ir::operation::shift_left: {
+                auto lhs = instruction.operands.at(1);
+                if (lhs.is_immediate) {
+                    std::cerr << "Cannot use " << lhs << " as the lhs of <<.\n";
+                    break;
+                }
+
+                auto rhs = instruction.operands.at(2);
+                auto lhs_reg = get_register(std::get<std::string>(lhs.data));
+                auto result_reg = get_register(std::get<std::string>(res.value().data));
+                if (rhs.is_immediate) {
+                    // sli
+                    next_op.code = opcode::sli;
+                    auto imm = std::get<long>(rhs.data);
+                    if (imm >= UINT32_MAX) {
+                        std::cerr << "Cannot put " << rhs << " in the imm field.\n";
+                        break;
+                    }
+                    next_op.data = make_reg_with_imm(result_reg, lhs_reg, imm);
+                } else {
+                    // sl
+                    next_op.code = opcode::sl;
+                    next_op.data = std::array{result_reg, lhs_reg,
+                                              get_register(std::get<std::string>(rhs.data))};
+                }
+            } break;
+            case ir::operation::shift_right: {
+                auto lhs = instruction.operands.at(1);
+                if (lhs.is_immediate) {
+                    std::cerr << "Cannot use " << lhs << " as the lhs of <<.\n";
+                    break;
+                }
+
+                auto rhs = instruction.operands.at(2);
+                auto lhs_reg = get_register(std::get<std::string>(lhs.data));
+                auto result_reg = get_register(std::get<std::string>(res.value().data));
+                if (rhs.is_immediate) {
+                    // sli
+                    next_op.code = opcode::sri;
+                    auto imm = std::get<long>(rhs.data);
+                    if (imm >= UINT32_MAX) {
+                        std::cerr << "Cannot put " << rhs << " in the imm field.\n";
+                        break;
+                    }
+                    next_op.data = make_reg_with_imm(result_reg, lhs_reg, imm);
+                } else {
+                    // sl
+                    next_op.code = opcode::sr;
+                    next_op.data = std::array{result_reg, lhs_reg,
+                                              get_register(std::get<std::string>(rhs.data))};
+                }
+            } break;
+            default:
+                std::cerr << "Instruction " << instruction
+                          << " cannot be translated to bytecode.\n";
+                break;
+            }
+            this->bytecode.push_back(next_op);
+            text_end += 8;
+        }
+    }
+}
+uint64_t program::append_data(const std::string & item) {
+    auto to_ret = this->data.size();
+    for (char c : item) data.push_back(c);
+    data.push_back('\0');
+    return to_ret;
+}
+} // namespace bytecode

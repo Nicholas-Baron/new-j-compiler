@@ -1,4 +1,5 @@
 
+#include "bytecode.h"
 #include "config.h"
 #include "lexer.h"
 #include "nodes.h"
@@ -40,6 +41,13 @@ int main(const int arg_count, const char ** args) {
         if (user_args->print_ir) {
             std::cout << "IR Dump" << std::endl;
             ir_gen.dump();
+        }
+
+        auto bytecode = bytecode::program::from_ir(ir_gen.program());
+        if (not bytecode.has_value()) {
+            std::cerr << "Bytecode generation failed." << std::endl;
+        } else {
+            std::cout << "Bytecode generated" << std::endl;
         }
     }
 }
