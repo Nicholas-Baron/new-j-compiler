@@ -454,9 +454,11 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
 
         auto * callee = prog.lookup_function(lookup_name, call.arguments.size());
 
-        this->append_instruction(
-            {ir::operation ::call,
-             {ir::operand{temp_name(), callee->return_type, false}, func_name.value()}});
+        std::vector operands{ir::operand{temp_name(), callee->return_type, false},
+                             func_name.value()};
+        for (auto & arg : call.arguments) { operands.push_back(eval_ast(*arg)); }
+
+        this->append_instruction({ir::operation ::call, operands});
     } break;
     case ast::node_type::value: {
         auto & value = dynamic_cast<const ast::literal_or_variable &>(expr);
