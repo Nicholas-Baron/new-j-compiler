@@ -400,9 +400,11 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
                                     {{temp_name(), ir::ir_type::boolean, false}, lhs, rhs_val}});
             }
             break;
-            /*
         case ast::bin_op::operation::sub:
+            append_instruction({ir::operation::sub,
+                                {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())}});
             break;
+            /*
         case ast::bin_op::operation::mult:
             break;
         case ast::bin_op::operation::div:
