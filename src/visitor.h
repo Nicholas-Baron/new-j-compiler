@@ -52,6 +52,8 @@ class ir_gen_visitor final : public visitor {
 
     void dump() const;
 
+    [[nodiscard]] const ir::program & program() const { return prog; }
+
   private:
     [[nodiscard]] std::optional<ir::ir_type> type_from(const token &);
 
