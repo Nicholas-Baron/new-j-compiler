@@ -13,6 +13,8 @@
             settings.print_help = true;
         } else if (arg == "-fsyntax-tree") {
             settings.print_syntax = true;
+        } else if (arg == "-fir-dump") {
+            settings.print_ir = true;
         } else if (arg.front() != '-') {
             settings.input_filename = arg;
         } else {

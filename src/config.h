@@ -9,6 +9,7 @@ struct user_settings {
     std::string input_filename{};
     bool print_help{false};
     bool print_syntax{false};
+    bool print_ir{false};
 };
 
 [[nodiscard]] std::shared_ptr<const user_settings> parse_cmdline_args(int arg_count,
