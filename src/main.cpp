@@ -29,13 +29,16 @@ int main(const int arg_count, const char ** args) {
         std::cout << "Success\n";
 
         if (user_args->print_syntax) {
+            std::cout << "Syntax tree:\n";
             printing_visitor pv{};
             program->visit([&](auto & node) { pv.visit(node); });
             std::cout << "Visited " << pv.visited_count() << " nodes" << std::endl;
         }
 
+        std::cout << "IR Generation" << std::endl;
         ir_gen_visitor ir_gen{};
         program->visit([&](auto & node) { ir_gen.visit(node); });
+        std::cout << "IR Dump" << std::endl;
         ir_gen.dump();
     }
 }
