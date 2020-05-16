@@ -270,7 +270,7 @@ std::optional<ir::operand> ir_gen_visitor::fold_to_constant(ast::expression & ex
             case 2: // long
                 return std::optional{
                     ir::operand{std::get<2>(lhs.value().data) + std::get<2>(rhs.value().data),
-                                ir::ir_type ::i64, false}};
+                                ir::ir_type ::i64, true}};
             case 0:
             default:
                 std::cerr << "Unknown type of expression: " << bin_op.text()
