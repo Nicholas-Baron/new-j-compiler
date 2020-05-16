@@ -88,11 +88,11 @@ class program {
     [[nodiscard]] function * register_function(const std::string & name, size_t param_count);
 
     void for_each_func(const std::function<void(ir::function *)> & visitor) const {
-        for (const auto & func : program) visitor(func.get());
+        for (const auto & func : prog) visitor(func.get());
     }
 
   private:
-    std::vector<std::unique_ptr<ir::function>> program;
+    std::vector<std::unique_ptr<ir::function>> prog;
 };
 
 } // namespace ir

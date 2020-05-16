@@ -10,24 +10,24 @@
 namespace ir {
 
 bool program::function_exists(const std::string & name) const noexcept {
-    return std::find_if(program.begin(), program.end(),
+    return std::find_if(prog.begin(), prog.end(),
                         [&name](const auto & func) -> bool { return func->name == name; })
-           != program.end();
+           != prog.end();
 }
 
 bool program::function_exists(const std::string & name, size_t param_count) const noexcept {
 
-    return std::find_if(this->program.begin(), this->program.end(),
+    return std::find_if(this->prog.begin(), this->prog.end(),
                         [&](const auto & func) -> bool {
                             return func->name == name and func->parameters.size() == param_count;
                         })
-           != this->program.end();
+           != this->prog.end();
 }
 
 function * program::lookup_function(const std::string & name) const noexcept {
     if (not function_exists(name)) return nullptr;
 
-    return std::find_if(program.begin(), program.end(),
+    return std::find_if(prog.begin(), prog.end(),
                         [&name](const auto & func) -> bool { return func->name == name; })
         ->get();
 }
@@ -36,13 +36,13 @@ function * program::register_function(const std::string & name, size_t param_cou
 
     if (this->function_exists(name, param_count)) return lookup_function(name, param_count);
 
-    program.push_back(std::make_unique<ir::function>(name));
-    return program.back().get();
+    prog.push_back(std::make_unique<ir::function>(name));
+    return prog.back().get();
 }
 function * program::lookup_function(const std::string & name, size_t param_count) const noexcept {
     if (not this->function_exists(name, param_count)) return nullptr;
 
-    return std::find_if(this->program.begin(), this->program.end(),
+    return std::find_if(this->prog.begin(), this->prog.end(),
                         [&](const auto & func) -> bool {
                             return func->name == name and func->parameters.size() == param_count;
                         })
