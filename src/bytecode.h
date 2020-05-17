@@ -61,6 +61,7 @@ class program {
   private:
     void generate_bytecode(const ir::function & function);
     uint64_t append_data(const std::string &);
+    operation make_instruction(const ir::three_address&, std::map<std::string, uint8_t>&);
 
     std::vector<char> data{};
     std::vector<operation> bytecode{};
