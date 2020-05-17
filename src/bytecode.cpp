@@ -44,6 +44,7 @@ void program::generate_bytecode(const ir::function & function) {
     std::map<std::string, uint8_t> register_alloc;
     const auto allocate_register = [&](std::string name) {
         if (next_reg >= temp_end) std::cerr << "Too many temporaries\n";
+        // TODO: Phi nodes may free up some registers. Try to take advantage of that
         register_alloc.insert_or_assign(std::move(name), next_reg++);
     };
 
@@ -51,13 +52,24 @@ void program::generate_bytecode(const ir::function & function) {
         allocate_register(std::get<std::string>(op.data));
     };
 
+    // Preallocate registers
     for (auto & block : function.body) {
-        for (const auto & inst : block->contents)
-            if (auto res = inst.result(); res.has_value()) allocate_operand(res.value());
-    }
+        for (const auto & inst : block->contents) {
+            if (auto res = inst.result(); inst.op == ir::operation::phi) {
+                uint8_t phi_register = UINT8_MAX;
+                for (auto iter = inst.operands.begin() + 1; iter != inst.operands.end(); ++iter) {
 
-    const auto get_register
-        = [&register_alloc](const std::string & name) { return register_alloc.at(name); };
+                    phi_register = std::min(phi_register,
+                                            register_alloc.at(std::get<std::string>(iter->data)));
+                }
+                for (auto & operand : inst.operands) {
+                    register_alloc.insert_or_assign(std::get<std::string>(operand.data),
+                                                    phi_register);
+                }
+            } else if (res.has_value())
+                allocate_operand(res.value());
+        }
+    }
 
     // Parameters start at 13 and end at 19
     constexpr auto max_inputs = (19 - 13) + 1;
