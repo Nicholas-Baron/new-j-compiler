@@ -362,20 +362,18 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         switch (bin.oper()) {
         case ast::bin_op::operation::add:
             append_instruction(ir::operation ::add,
-                               {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())});
+                               {temp_operand(lhs.type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
         default:
             std::cerr << "Unimplemented operation: " << expr.text() << '\n';
             break;
         case ast::bin_op::operation::le:
-            append_instruction(
-                ir::operation ::le,
-                {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())});
+            append_instruction(ir::operation ::le, {temp_operand(ir::ir_type ::boolean, false), lhs,
+                                                    eval_ast(bin.rhs_ref())});
             break;
         case ast::bin_op::operation::eq:
-            append_instruction(
-                ir::operation ::eq,
-                {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())});
+            append_instruction(ir::operation ::eq, {temp_operand(ir::ir_type ::boolean, false), lhs,
+                                                    eval_ast(bin.rhs_ref())});
             break;
         case ast::bin_op::operation::boolean_or:
             if (lhs.type != ir::ir_type::boolean) return {false, ir::ir_type ::boolean, false};
@@ -390,12 +388,12 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
                 auto rhs_val = eval_ast(bin.rhs_ref());
                 append_block(std::move(true_block_name));
                 append_instruction(ir::operation::phi,
-                                   {{temp_name(), ir::ir_type::boolean, false}, lhs, rhs_val});
+                                   {temp_operand(ir::ir_type::boolean, false), lhs, rhs_val});
             }
             break;
         case ast::bin_op::operation::sub:
             append_instruction(ir::operation::sub,
-                               {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())});
+                               {temp_operand(lhs.type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
             /*
         case ast::bin_op::operation::mult:
@@ -449,8 +447,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
 
         auto * callee = prog.lookup_function(lookup_name, call.arguments.size());
 
-        std::vector operands{ir::operand{temp_name(), callee->return_type, false},
-                             func_name.value()};
+        std::vector operands{temp_operand(callee->return_type, false), func_name.value()};
         for (auto & arg : call.arguments) { operands.push_back(eval_ast(*arg)); }
 
         this->append_instruction(ir::operation ::call, std::move(operands));

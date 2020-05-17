@@ -71,7 +71,11 @@ class ir_gen_visitor final : public visitor {
         append_instruction({op, std::move(operands)});
     }
     ir::basic_block * append_block(std::string && name);
+
     [[nodiscard]] std::string temp_name();
+    [[nodiscard]] ir::operand temp_operand(ir::ir_type type, bool immediate) {
+        return {temp_name(), type, immediate};
+    }
     [[nodiscard]] std::string block_name();
 
     ir::program prog{};
