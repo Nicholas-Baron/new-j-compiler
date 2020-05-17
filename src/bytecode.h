@@ -59,9 +59,18 @@ class program {
     static std::optional<program> from_ir(const ir::program &);
 
   private:
+    struct register_info {
+        uint8_t reg_num;
+        size_t first_write;
+        size_t last_read;
+        
+        register_info(uint8_t register_number, size_t first_written);
+    };
+
     void generate_bytecode(const ir::function & function);
     uint64_t append_data(const std::string &);
-    operation make_instruction(const ir::three_address&, std::map<std::string, uint8_t>&);
+    operation make_instruction(const ir::three_address &, std::map<std::string, register_info> &,
+                               size_t);
 
     std::vector<char> data{};
     std::vector<operation> bytecode{};
