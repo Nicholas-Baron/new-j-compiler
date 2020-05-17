@@ -218,4 +218,58 @@ std::optional<operand> three_address::result() const {
         return {};
     }
 }
+std::vector<operand> three_address::inputs() const {
+    // The operand at the front is usually the output
+    switch (this->op) {
+    case operation::add:
+    case operation::bit_and:
+    case operation::bit_or:
+    case operation::bool_and:
+    case operation::bool_or:
+    case operation::div:
+    case operation::eq:
+    case operation::ge:
+    case operation::gt:
+    case operation::le:
+    case operation::lt:
+    case operation::mul:
+    case operation::ne:
+    case operation::phi:
+    case operation::shift_left:
+    case operation::shift_right:
+    case operation::sub:
+        return {operands.at(1), operands.at(2)};
+    case operation::assign:
+        return {operands.back()};
+    case operation::branch:
+    case operation::halt:
+        return {operands.front()};
+    case operation::call:
+        if (result().has_value()) {
+            std::vector<operand> to_ret;
+            bool first = true;
+            for (auto & operand : operands)
+                if (first) first = false;
+                else
+                    to_ret.push_back(operand);
+
+            return to_ret;
+        } else
+            return operands;
+
+    case operation::load: {
+        std::vector<operand> to_ret;
+        bool first = true;
+        for (auto & operand : operands)
+            if (first) first = false;
+            else
+                to_ret.push_back(operand);
+
+        return to_ret;
+    }
+    case operation::ret:
+    case operation::store:
+        return operands;
+    }
+}
 } // namespace ir

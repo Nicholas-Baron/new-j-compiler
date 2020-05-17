@@ -56,6 +56,7 @@ struct three_address {
     operation op;
     std::vector<operand> operands;
     [[nodiscard]] std::optional<operand> result() const;
+    [[nodiscard]] std::vector<operand> inputs() const;
 
   private:
     friend std::ostream & operator<<(std::ostream & lhs, const three_address & rhs);
