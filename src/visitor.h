@@ -67,6 +67,9 @@ class ir_gen_visitor final : public visitor {
     [[nodiscard]] ir::basic_block * current_block();
 
     void append_instruction(ir::three_address && inst);
+    void append_instruction(ir::operation op, std::vector<ir::operand> && operands = {}) {
+        append_instruction({op, std::move(operands)});
+    }
     ir::basic_block * append_block(std::string && name);
     [[nodiscard]] std::string temp_name();
     [[nodiscard]] std::string block_name();

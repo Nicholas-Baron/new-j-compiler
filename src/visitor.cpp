@@ -129,7 +129,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
         visit(func.name);
         for (const auto & param : func.params) visit(param);
         visit(*func.body);
-        if (not func_ir->body.back()->terminated()) append_instruction({ir::operation ::ret, {}});
+        if (not func_ir->body.back()->terminated()) append_instruction(ir::operation ::ret);
         this->active_variables.pop_back();
         this->current_func = nullptr;
     } break;
@@ -159,7 +159,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
         args.push_back(eval_ast(*func_call.func_name));
         for (const auto & arg : func_call.arguments) args.push_back(eval_ast(*arg));
 
-        append_instruction({ir::operation ::call, args});
+        append_instruction(ir::operation ::call, std::move(args));
     } break;
     case ast::node_type ::parameter: {
         auto & param = dynamic_cast<const ast::parameter &>(node);
@@ -186,18 +186,18 @@ void ir_gen_visitor::visit(const ast::node & node) {
         visit(*if_stmt.then_block);
 
         if (if_stmt.else_block == nullptr and not current_block()->terminated()) {
-            append_instruction({ir::operation ::branch, {{exit_name, ir::ir_type ::str, false}}});
+            append_instruction(ir::operation ::branch, {{exit_name, ir::ir_type ::str, false}});
             append_block(std::move(exit_name));
         } else if (if_stmt.else_block != nullptr) {
             auto real_exit_name = block_name();
             if (not current_block()->terminated())
-                append_instruction(
-                    {ir::operation ::branch, {{real_exit_name, ir::ir_type ::str, false}}});
+                append_instruction(ir::operation ::branch,
+                                   {{real_exit_name, ir::ir_type ::str, false}});
             append_block(std::move(exit_name));
             visit(*if_stmt.else_block);
             if (not current_block()->terminated()) {
-                append_instruction(
-                    {ir::operation ::branch, {{real_exit_name, ir::ir_type ::str, false}}});
+                append_instruction(ir::operation ::branch,
+                                   {{real_exit_name, ir::ir_type ::str, false}});
                 append_block(std::move(real_exit_name));
             }
         }
@@ -211,7 +211,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
         std::vector<ir::operand> return_value;
 
         if (ret.value != nullptr) return_value.push_back(eval_ast(*ret.value));
-        append_instruction({ir::operation ::ret, return_value});
+        append_instruction(ir::operation ::ret, std::move(return_value));
     } break;
     default:
         std::cerr << "Unimplemented ir gen for node " << node.text() << std::endl;
@@ -333,9 +333,9 @@ std::string ir_gen_visitor::temp_name() { return "temp_" + std::to_string(this->
 std::optional<ir::ir_type> ir_gen_visitor::type_from(const token & tok) {
     switch (tok.type()) {
     case token_type ::Int32:
-        return {ir::ir_type ::i32};
+        return ir::ir_type ::i32;
     case token_type ::Int64:
-        return {ir::ir_type ::i64};
+        return ir::ir_type ::i64;
     case token_type ::Struct:
         std::cerr << "Currently compiler does not support user-defined types\n";
         return {};
@@ -364,41 +364,41 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
 
         switch (bin.oper()) {
         case ast::bin_op::operation::add:
-            append_instruction({ir::operation ::add,
-                                {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())}});
+            append_instruction(ir::operation ::add,
+                               {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())});
             break;
         default:
             std::cerr << "Unimplemented operation: " << expr.text() << '\n';
             break;
         case ast::bin_op::operation::le:
             append_instruction(
-                {ir::operation ::le,
-                 {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())}});
+                ir::operation ::le,
+                {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())});
             break;
         case ast::bin_op::operation::eq:
             append_instruction(
-                {ir::operation ::eq,
-                 {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())}});
+                ir::operation ::eq,
+                {{temp_name(), ir::ir_type ::boolean, false}, lhs, eval_ast(bin.rhs_ref())});
             break;
         case ast::bin_op::operation::boolean_or:
             if (lhs.type != ir::ir_type::boolean) return {false, ir::ir_type ::boolean, false};
             else {
                 auto false_block_name = block_name();
                 auto true_block_name = block_name();
-                append_instruction({ir::operation::branch,
-                                    {lhs,
-                                     {true_block_name, ir::ir_type::str, false},
-                                     {false_block_name, ir::ir_type::str, false}}});
+                append_instruction(ir::operation::branch,
+                                   {lhs,
+                                    {true_block_name, ir::ir_type::str, false},
+                                    {false_block_name, ir::ir_type::str, false}});
                 append_block(std::move(false_block_name));
                 auto rhs_val = eval_ast(bin.rhs_ref());
                 append_block(std::move(true_block_name));
-                append_instruction({ir::operation::phi,
-                                    {{temp_name(), ir::ir_type::boolean, false}, lhs, rhs_val}});
+                append_instruction(ir::operation::phi,
+                                   {{temp_name(), ir::ir_type::boolean, false}, lhs, rhs_val});
             }
             break;
         case ast::bin_op::operation::sub:
-            append_instruction({ir::operation::sub,
-                                {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())}});
+            append_instruction(ir::operation::sub,
+                               {{temp_name(), lhs.type, false}, lhs, eval_ast(bin.rhs_ref())});
             break;
             /*
         case ast::bin_op::operation::mult:
@@ -456,7 +456,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
                              func_name.value()};
         for (auto & arg : call.arguments) { operands.push_back(eval_ast(*arg)); }
 
-        this->append_instruction({ir::operation ::call, operands});
+        this->append_instruction(ir::operation ::call, std::move(operands));
     } break;
     case ast::node_type::value: {
         auto & value = dynamic_cast<const ast::literal_or_variable &>(expr);
@@ -504,30 +504,30 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
             auto short_circuit = block_name();
 
             auto short_operand = ir::operand{short_circuit, ir::ir_type::str, false};
-            append_instruction({ir::operation::branch, {lhs, short_operand, false_operand}});
+            append_instruction(ir::operation::branch, {lhs, short_operand, false_operand});
 
             append_block(std::move(short_circuit));
             auto rhs = eval_ast(bin.rhs_ref());
-            append_instruction({ir::operation::branch, {rhs, true_operand, false_operand}});
+            append_instruction(ir::operation::branch, {rhs, true_operand, false_operand});
         } break;
         case ast::bin_op::operation::boolean_or: {
             auto lhs = eval_ast(bin.lhs_ref());
             auto short_circuit = block_name();
 
             auto short_operand = ir::operand{short_circuit, ir::ir_type::str, false};
-            append_instruction({ir::operation::branch, {lhs, true_operand, short_operand}});
+            append_instruction(ir::operation::branch, {lhs, true_operand, short_operand});
 
             append_block(std::move(short_circuit));
             auto rhs = eval_ast(bin.rhs_ref());
-            append_instruction({ir::operation::branch, {rhs, true_operand, false_operand}});
+            append_instruction(ir::operation::branch, {rhs, true_operand, false_operand});
         } break;
         case ast::bin_op::operation::le:
         case ast::bin_op::operation::lt:
         case ast::bin_op::operation::gt:
         case ast::bin_op::operation::ge:
         case ast::bin_op::operation::eq:
-            append_instruction(
-                {ir::operation::branch, {eval_ast(expr), true_operand, false_operand}});
+            append_instruction(ir::operation::branch,
+                               {eval_ast(expr), true_operand, false_operand});
             break;
         default:
             std::cerr << "Unexpected non-boolean binary op in if branch: " << bin.text()
@@ -542,10 +542,10 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
             return;
         }
 
-        append_instruction({ir::operation::branch, {result, true_operand, false_operand}});
+        append_instruction(ir::operation::branch, {result, true_operand, false_operand});
     } break;
     case ast::node_type::value:
-        append_instruction({ir::operation::branch, {eval_ast(expr), true_operand, false_operand}});
+        append_instruction(ir::operation::branch, {eval_ast(expr), true_operand, false_operand});
         break;
     default:
         std::cerr << "Unexpected node as condition of if: " << expr.text() << std::endl;
