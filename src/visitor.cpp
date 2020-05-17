@@ -176,15 +176,11 @@ void ir_gen_visitor::visit(const ast::node & node) {
     } break;
     case ast::node_type::if_statement: {
         auto & if_stmt = dynamic_cast<const ast::if_stmt &>(node);
-        auto to_not_jmp = eval_ast(*if_stmt.cond);
 
         auto then_block_name = this->block_name();
         auto exit_name = this->block_name();
 
-        append_instruction({ir::operation::branch,
-                            {to_not_jmp,
-                             {then_block_name, ir::ir_type ::str, false},
-                             {exit_name, ir::ir_type ::str, false}}});
+        eval_if_condition(*if_stmt.cond, then_block_name, exit_name);
 
         append_block(std::move(then_block_name));
         visit(*if_stmt.then_block);
@@ -492,4 +488,67 @@ std::optional<ir::operand> ir_gen_visitor::read_variable(const std::string & nam
         if (iter->count(name) != 0) return iter->at(name);
     }
     return {};
+}
+void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
+                                       const std::string & true_branch,
+                                       const std::string & false_branch) {
+
+    auto true_operand = ir::operand{true_branch, ir::ir_type::str, false};
+    auto false_operand = ir::operand{false_branch, ir::ir_type::str, false};
+    switch (expr.type()) {
+
+    case ast::node_type::binary_op:
+        switch (auto & bin = dynamic_cast<const ast::bin_op &>(expr); bin.op) {
+        case ast::bin_op::operation::boolean_and: {
+            auto lhs = eval_ast(bin.lhs_ref());
+            auto short_circuit = block_name();
+
+            auto short_operand = ir::operand{short_circuit, ir::ir_type::str, false};
+            append_instruction({ir::operation::branch, {lhs, short_operand, false_operand}});
+
+            append_block(std::move(short_circuit));
+            auto rhs = eval_ast(bin.rhs_ref());
+            append_instruction({ir::operation::branch, {rhs, true_operand, false_operand}});
+        } break;
+        case ast::bin_op::operation::boolean_or: {
+            auto lhs = eval_ast(bin.lhs_ref());
+            auto short_circuit = block_name();
+
+            auto short_operand = ir::operand{short_circuit, ir::ir_type::str, false};
+            append_instruction({ir::operation::branch, {lhs, true_operand, short_operand}});
+
+            append_block(std::move(short_circuit));
+            auto rhs = eval_ast(bin.rhs_ref());
+            append_instruction({ir::operation::branch, {rhs, true_operand, false_operand}});
+        } break;
+        case ast::bin_op::operation::le:
+        case ast::bin_op::operation::lt:
+        case ast::bin_op::operation::gt:
+        case ast::bin_op::operation::ge:
+        case ast::bin_op::operation::eq:
+            append_instruction(
+                {ir::operation::branch, {eval_ast(expr), true_operand, false_operand}});
+            break;
+        default:
+            std::cerr << "Unexpected non-boolean binary op in if branch: " << bin.text()
+                      << std::endl;
+        }
+        break;
+    case ast::node_type::func_call: {
+        auto result = eval_ast(expr);
+
+        if (result.type != ir::ir_type::boolean) {
+            std::cerr << "Function call " << expr.text() << " does not return boolean" << std::endl;
+            return;
+        }
+
+        append_instruction({ir::operation::branch, {result, true_operand, false_operand}});
+    } break;
+    case ast::node_type::value:
+        append_instruction({ir::operation::branch, {eval_ast(expr), true_operand, false_operand}});
+        break;
+    default:
+        std::cerr << "Unexpected node as condition of if: " << expr.text() << std::endl;
+        return;
+    }
 }

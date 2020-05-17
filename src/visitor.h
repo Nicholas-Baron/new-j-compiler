@@ -58,6 +58,8 @@ class ir_gen_visitor final : public visitor {
     [[nodiscard]] std::optional<ir::ir_type> type_from(const token &);
 
     [[nodiscard]] ir::operand eval_ast(const ast::expression &);
+    void eval_if_condition(const ast::expression &, const std::string & true_branch,
+                           const std::string & false_branch);
     [[nodiscard]] std::optional<ir::operand> read_variable(const std::string & name) const;
 
     [[nodiscard]] scope_t & global_scope() noexcept;
