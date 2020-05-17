@@ -84,42 +84,39 @@ void printing_visitor::print_indent() const { std::cout << std::string(indent_de
 
 void ir_gen_visitor::visit(const ast::node & node) {
     switch (node.type()) {
-    case ast::node_type ::var_decl:
-        if (auto * decl = dynamic_cast<const ast::var_decl *>(&node); decl != nullptr) {
-            auto id = decl->identifier();
+    case ast::node_type ::var_decl: {
+        auto & decl = dynamic_cast<const ast::var_decl &>(node);
+        auto id = decl.identifier();
 
-            auto value = this->fold_to_constant(*decl->value_expr());
-            if (not value) {
-                std::cerr << "Could not evaluate the constant " << decl->identifier() << '\n';
+        auto value = this->fold_to_constant(decl.value_expr());
+        if (not value) {
+            std::cerr << "Could not evaluate the constant " << decl.identifier() << '\n';
+            return;
+        }
+
+        if (decl.in_global_scope()) {
+            // Is a global
+
+            // Check that we are not redeclaring the value
+            auto & globals = this->global_scope();
+            if (globals.count(id) != 0) {
+                std::cerr << "Redeclaring the global constant " << decl.identifier() << '\n';
                 return;
             }
 
-            if (decl->in_global_scope()) {
-                // Is a global
-
-                // Check that we are not redeclaring the value
-                auto & globals = this->global_scope();
-                if (globals.count(id) != 0) {
-                    std::cerr << "Redeclaring the global constant " << decl->identifier() << '\n';
-                    return;
-                }
-
-                globals.try_emplace(id, std::move(*value));
-            } else {
-                // Some local
-                auto & locals = this->current_scope();
-                if (locals.count(id) != 0) {
-                    std::cerr << "Redeclaring the local constant " << decl->identifier() << '\n';
-                    return;
-                }
-
-                locals.try_emplace(id, std::move(*value));
-            }
+            globals.try_emplace(id, std::move(*value));
         } else {
-            std::cerr << "There is a node where the node.type() is var_decl, but is not an "
-                         "ast::var_decl\n";
+            // Some local
+            auto & locals = this->current_scope();
+            if (locals.count(id) != 0) {
+                std::cerr << "Redeclaring the local constant " << decl.identifier() << '\n';
+                return;
+            }
+
+            locals.try_emplace(id, std::move(*value));
         }
-        break;
+
+    } break;
     case ast::node_type ::function: {
         auto & func = dynamic_cast<const ast::function &>(node);
         auto * func_ir = this->prog.register_function(func.identifier(), func.params.size());

@@ -216,7 +216,7 @@ struct var_decl final : public ast::top_level, public ast::statement {
 
     [[nodiscard]] bool in_global_scope() const noexcept { return detail == details::GlobalConst; }
 
-    [[nodiscard]] expression * value_expr() const noexcept { return val.get(); }
+    [[nodiscard]] expression & value_expr() const noexcept { return *val; }
 
     opt_typed name;
     std::unique_ptr<expression> val;
