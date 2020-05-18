@@ -56,6 +56,7 @@ struct operation {
 };
 
 static constexpr uint64_t pc_start = 0x80000000;
+static constexpr uint64_t data_start = 0x8C000000;
 
 class program {
   public:
