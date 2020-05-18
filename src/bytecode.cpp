@@ -38,17 +38,21 @@ std::pair<operation, operation> load_64_bits(uint8_t dest, uint64_t val) {
     auto second = operation{opcode::ori, make_reg_with_imm(dest, dest, val & mask_low_32_bit)};
     return std::make_pair(first, second);
 }
+constexpr uint8_t param_start = 13;
+constexpr uint8_t param_end = 19;
+constexpr auto max_inputs = (param_end - param_start) + 1;
+constexpr uint8_t temp_start = 20;
+constexpr uint8_t temp_end = 61;
 
 void program::generate_bytecode(const ir::function & function) {
 
     labels.emplace(function.name, text_end);
 
-    constexpr uint8_t temp_start = 20;
-    constexpr uint8_t temp_end = 61;
     std::map<std::string, register_info> register_alloc;
     auto register_for_operand = [&register_alloc](const ir::operand & operand) -> register_info & {
         return register_alloc.at(std::get<std::string>(operand.data));
     };
+
     auto allocate_register
         = [&register_alloc](const ir::operand & operand, size_t instruction) -> void {
         std::set<uint8_t> used_registers;
@@ -67,6 +71,21 @@ void program::generate_bytecode(const ir::function & function) {
                                         register_info{last_reg, instruction});
     };
 
+    // Parameters start at 13 and end at 19
+    if (uint8_t param_num = 13; function.parameters.size() <= max_inputs)
+        for (auto & param : function.parameters)
+            register_alloc.insert_or_assign(std::get<std::string>(param.data),
+                                            register_info{param_num++, 0});
+    else {
+        // Too many parameters were declared
+        std::cerr << "Function " << function.name << " has more than " << max_inputs
+                  << " parameters.\n"
+                     "Currently, "
+                  << function.parameters.size() << " parameter functions are not supported.\n";
+        labels.erase(function.name);
+        return;
+    }
+
     // Preallocate registers
     auto ir_inst_num = 0u;
     for (auto & block : function.body) {
@@ -80,24 +99,18 @@ void program::generate_bytecode(const ir::function & function) {
                     register_for_operand(operand).reg_num = phi_register;
 
             } else if (res.has_value())
-                allocate_register(res.value(), ir_inst_num++);
-        }
-    }
+                allocate_register(res.value(), ir_inst_num);
 
-    // Parameters start at 13 and end at 19
-    constexpr auto max_inputs = (19 - 13) + 1;
-    if (uint8_t param_num = 13; function.parameters.size() <= max_inputs)
-        for (auto & param : function.parameters)
-            register_alloc.insert_or_assign(std::get<std::string>(param.data),
-                                            register_info{param_num++, 0});
-    else {
-        // Too many parameters were declared
-        std::cerr << "Function " << function.name << " has more than " << max_inputs
-                  << " parameters.\n"
-                     "Currently, "
-                  << function.parameters.size() << " parameter functions are not supported.\n";
-        labels.erase(function.name);
-        return;
+            for (auto & input : inst.inputs()) {
+                if (not input.is_immediate and input.type != ir::ir_type::str) {
+                    // Either a user defined variable or compiler temporary
+                    auto name = std::get<std::string>(input.data);
+                    register_alloc.at(name).last_read = ir_inst_num;
+                }
+            }
+
+            ir_inst_num++;
+        }
     }
 
     ir_inst_num = 0;
