@@ -75,8 +75,8 @@ class program {
 
     void generate_bytecode(const ir::function & function);
     uint64_t append_data(const std::string &);
-    operation make_instruction(const ir::three_address &, std::map<std::string, register_info> &,
-                               size_t, const ir::function &);
+    void make_instruction(const ir::three_address &, std::map<std::string, register_info> &, size_t,
+                          const ir::function &);
 
     void append_instruction(operation &&);
     void append_instruction(opcode op, decltype(operation::data) && data) {

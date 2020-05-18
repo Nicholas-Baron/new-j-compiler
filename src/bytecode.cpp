@@ -176,8 +176,7 @@ void program::generate_bytecode(const ir::function & function) {
     for (auto & block : function.body) {
         assign_label(block->name, text_end);
         for (auto & instruction : block->contents) {
-            append_instruction(
-                make_instruction(instruction, register_alloc, ir_inst_num++, function));
+            make_instruction(instruction, register_alloc, ir_inst_num++, function);
         }
     }
 }
@@ -187,10 +186,9 @@ uint64_t program::append_data(const std::string & item) {
     data.push_back('\0');
     return to_ret;
 }
-operation program::make_instruction(const ir::three_address & instruction,
-                                    std::map<std::string, register_info> & register_alloc,
-                                    size_t inst_num, const ir::function & func) {
-    operation next_op;
+void program::make_instruction(const ir::three_address & instruction,
+                               std::map<std::string, register_info> & register_alloc,
+                               size_t inst_num, const ir::function & func) {
 
     // TODO: record the last written times
     const auto get_register_info = [&register_alloc](const std::string & name) -> register_info & {
@@ -212,34 +210,30 @@ operation program::make_instruction(const ir::three_address & instruction,
             }
             auto [first, second] = load_64_bits(result_reg, lhs_value + rhs_value);
             if (first.has_value()) append_instruction(std::move(*first));
-            next_op = second;
+            append_instruction(std::move(second));
         } else if (lhs.is_immediate and not rhs.is_immediate) {
             // ori lhs + add rhs
             append_instruction(
                 opcode::ori,
                 make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(lhs.data))));
 
-            next_op.code = opcode::add;
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-            next_op.data = std::array{result_reg, result_reg, rhs_reg};
+            append_instruction(opcode::add, std::array{result_reg, result_reg, rhs_reg});
         } else if (rhs.is_immediate and not lhs.is_immediate) {
             // ori rhs + add lhs
             append_instruction(
                 opcode::ori,
                 make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(rhs.data))));
 
-            next_op.code = opcode::add;
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
-            next_op.data = std::array{result_reg, result_reg, lhs_reg};
+            append_instruction(opcode::add, std::array{result_reg, result_reg, lhs_reg});
         } else {
             // both are not immediates
             // simple add
 
-            next_op.code = opcode::add;
-
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-            next_op.data = std::array{result_reg, lhs_reg, rhs_reg};
+            append_instruction(opcode::add, std::array{result_reg, lhs_reg, rhs_reg});
         }
 
     } break;
@@ -256,7 +250,7 @@ operation program::make_instruction(const ir::three_address & instruction,
             }
             auto [first, second] = load_64_bits(result_reg, lhs_value - rhs_value);
             if (first.has_value()) append_instruction(std::move(*first));
-            next_op = second;
+            append_instruction(std::move(second));
 
         } else if (lhs.is_immediate and not rhs.is_immediate) {
             // ori lhs + sub rhs
@@ -264,27 +258,23 @@ operation program::make_instruction(const ir::three_address & instruction,
                 opcode::ori,
                 make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(lhs.data))));
 
-            next_op.code = opcode::sub;
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-            next_op.data = std::array{result_reg, result_reg, rhs_reg};
+            append_instruction(opcode::sub, std::array{result_reg, result_reg, rhs_reg});
         } else if (rhs.is_immediate and not lhs.is_immediate) {
             // ori rhs + sub lhs
             append_instruction(
                 opcode::ori,
                 make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(rhs.data))));
 
-            next_op.code = opcode::sub;
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
-            next_op.data = std::array{result_reg, lhs_reg, result_reg};
+            append_instruction(opcode::sub, std::array{result_reg, lhs_reg, result_reg});
         } else {
             // both are not immediates
             // simple sub
 
-            next_op.code = opcode::add;
-
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-            next_op.data = std::array{result_reg, lhs_reg, rhs_reg};
+            append_instruction(opcode::sub, std::array{result_reg, lhs_reg, rhs_reg});
         }
     } break;
     case ir::operation::assign: {
@@ -296,17 +286,16 @@ operation program::make_instruction(const ir::three_address & instruction,
                 auto [first, second]
                     = load_64_bits(result_reg, append_data(std::get<std::string>(src.data)));
                 if (first.has_value()) append_instruction(std::move(*first));
-                next_op = second;
+                append_instruction(std::move(second));
             } break;
             case ir::ir_type::i32:
-                next_op.code = opcode::ori;
-                next_op.data = make_reg_with_imm(result_reg, 0,
-                                                 static_cast<uint32_t>(std::get<long>(src.data)));
+                append_instruction(opcode::ori,
+                                   make_reg_with_imm(result_reg, 0, std::get<long>(src.data)));
                 break;
             case ir::ir_type::i64: {
                 auto [first, second] = load_64_bits(result_reg, std::get<long>(src.data));
                 if (first.has_value()) append_instruction(std::move(*first));
-                next_op = second;
+                append_instruction(std::move(second));
             } break;
             default:
                 std::cerr << "Cannot use " << src << " as the rhs of an assignment.\n";
@@ -325,29 +314,28 @@ operation program::make_instruction(const ir::three_address & instruction,
                 val &= mask_low_32_bit;
             }
 
-            next_op.code = opcode::ori;
-            next_op.data = make_reg_with_imm(result_reg, result_reg, val);
+            append_instruction(opcode::ori, make_reg_with_imm(result_reg, result_reg, val));
 
         } else if (rhs.is_immediate and not lhs.is_immediate) {
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
-            next_op.code = opcode::ori;
-            next_op.data = make_reg_with_imm(result_reg, lhs_reg, std::get<long>(rhs.data));
+            append_instruction(opcode::ori,
+                               make_reg_with_imm(result_reg, lhs_reg, std::get<long>(rhs.data)));
         } else if (lhs.is_immediate and not rhs.is_immediate) {
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-            next_op.code = opcode::ori;
-            next_op.data = make_reg_with_imm(result_reg, rhs_reg, std::get<long>(lhs.data));
+            append_instruction(opcode::ori,
+                               make_reg_with_imm(result_reg, rhs_reg, std::get<long>(lhs.data)));
         } else {
-            next_op.code = opcode::or_;
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-            next_op.data = std::array{result_reg, lhs_reg, rhs_reg};
+            append_instruction(opcode::or_, std::array{result_reg, lhs_reg, rhs_reg});
         }
     } break;
 
     case ir::operation::halt:
-        next_op.code = opcode::syscall;
-        next_op.data = make_reg_with_imm(
-            get_register_info(std::get<std::string>(res.value().data)).reg_num, 0, 0);
+        append_instruction(
+            opcode::syscall,
+            make_reg_with_imm(get_register_info(std::get<std::string>(res.value().data)).reg_num, 0,
+                              0));
         break;
 
     case ir::operation::ret:
@@ -359,8 +347,7 @@ operation program::make_instruction(const ir::three_address & instruction,
                     make_reg_with_imm(
                         ret_loc++, get_register_info(std::get<std::string>(val.data)).reg_num, 0));
         }
-        next_op.code = opcode::jr;
-        next_op.data = std::array<uint8_t, 3>{return_address, 0, 0};
+        append_instruction(opcode::jr, std::array<uint8_t, 3>{return_address, 0, 0});
         break;
     case ir::operation::shift_left: {
         auto lhs = instruction.operands.at(1);
@@ -374,18 +361,17 @@ operation program::make_instruction(const ir::three_address & instruction,
         auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
         if (rhs.is_immediate) {
             // sli
-            next_op.code = opcode::sli;
             auto imm = std::get<long>(rhs.data);
             if (imm >= UINT32_MAX) {
                 std::cerr << "Cannot put " << rhs << " in the imm field.\n";
                 break;
             }
-            next_op.data = make_reg_with_imm(result_reg, lhs_reg, imm);
+            append_instruction(opcode::sli, make_reg_with_imm(result_reg, lhs_reg, imm));
         } else {
             // sl
-            next_op.code = opcode::sl;
-            next_op.data = std::array{result_reg, lhs_reg,
-                                      get_register_info(std::get<std::string>(rhs.data)).reg_num};
+            append_instruction(
+                opcode::sl, std::array{result_reg, lhs_reg,
+                                       get_register_info(std::get<std::string>(rhs.data)).reg_num});
         }
     } break;
     case ir::operation::shift_right: {
@@ -400,18 +386,17 @@ operation program::make_instruction(const ir::three_address & instruction,
         auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
         if (rhs.is_immediate) {
             // sli
-            next_op.code = opcode::sri;
             auto imm = std::get<long>(rhs.data);
             if (imm >= UINT32_MAX) {
                 std::cerr << "Cannot put " << rhs << " in the imm field.\n";
                 break;
             }
-            next_op.data = make_reg_with_imm(result_reg, lhs_reg, imm);
+            append_instruction(opcode::sri, make_reg_with_imm(result_reg, lhs_reg, imm));
         } else {
             // sl
-            next_op.code = opcode::sr;
-            next_op.data = std::array{result_reg, lhs_reg,
-                                      get_register_info(std::get<std::string>(rhs.data)).reg_num};
+            append_instruction(
+                opcode::sr, std::array{result_reg, lhs_reg,
+                                       get_register_info(std::get<std::string>(rhs.data)).reg_num});
         }
     } break;
     case ir::operation::call: {
@@ -472,7 +457,7 @@ operation program::make_instruction(const ir::three_address & instruction,
 
         if (func_name == "print") {
             setup_args();
-            next_op = print(instruction, register_alloc);
+            append_instruction(print(instruction, register_alloc));
             break;
         }
 
@@ -500,14 +485,14 @@ operation program::make_instruction(const ir::three_address & instruction,
             append_instruction(opcode::lqw, make_reg_with_imm(*iter, stack_pointer, offset));
         }
 
-        next_op.code = opcode::addi;
-        next_op.data = make_reg_with_imm(stack_pointer, stack_pointer, -stack_size);
+        append_instruction(opcode::addi,
+                           make_reg_with_imm(stack_pointer, stack_pointer, -stack_size));
     } break;
     case ir::operation::branch:
         if (instruction.operands.size() == 1) {
-            next_op.code = opcode::jmp;
-            next_op.data = read_label(std::get<std::string>(instruction.operands.front().data),
-                                      true, text_end);
+            append_instruction(opcode::jmp,
+                               read_label(std::get<std::string>(instruction.operands.front().data),
+                                          true, text_end));
         } else {
             // conditional branch
             const auto & condition = std::get<std::string>(instruction.operands.front().data);
@@ -525,7 +510,6 @@ operation program::make_instruction(const ir::three_address & instruction,
 
             switch (cond_inst->op) {
             case ir::operation::eq: {
-                next_op.code = opcode::jeq;
 
                 const auto & lhs = cond_inst->operands.at(1);
                 const auto & rhs = cond_inst->operands.at(2);
@@ -534,8 +518,9 @@ operation program::make_instruction(const ir::three_address & instruction,
                 if (not lhs.is_immediate and not rhs.is_immediate) {
                     auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
                     auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
-                    next_op.data = make_reg_with_imm(lhs_reg, rhs_reg,
-                                                     read_label(true_dest, false, text_end));
+                    append_instruction(opcode::jeq,
+                                       make_reg_with_imm(lhs_reg, rhs_reg,
+                                                         read_label(true_dest, false, text_end)));
                 } else {
                     std::cerr << "Cannot generate jeq for " << *cond_inst << std::endl;
                 }
@@ -562,8 +547,6 @@ operation program::make_instruction(const ir::three_address & instruction,
         std::cerr << "Instruction " << instruction << " cannot be translated to bytecode.\n";
         break;
     }
-
-    return next_op;
 }
 program::register_info::register_info(uint8_t register_number, size_t first_written)
     : reg_num{register_number}, writes{first_written}, reads{} {}
