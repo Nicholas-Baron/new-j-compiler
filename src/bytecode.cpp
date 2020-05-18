@@ -521,6 +521,15 @@ void program::make_instruction(const ir::three_address & instruction,
                     append_instruction(opcode::jeq,
                                        make_reg_with_imm(lhs_reg, rhs_reg,
                                                          read_label(true_dest, false, text_end)));
+                } else if (lhs.is_immediate and rhs.is_immediate) {
+                    auto lhs_val = std::get<long>(lhs.data);
+                    auto rhs_val = std::get<long>(rhs.data);
+                    if (lhs_val == rhs_val) {
+                        append_instruction(opcode::jmp, read_label(true_dest, true, text_end));
+                    } else {
+                        auto & false_dest = std::get<std::string>(instruction.operands.back().data);
+                        append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+                    }
                 } else {
                     std::cerr << "Cannot generate jeq for " << *cond_inst << std::endl;
                 }
