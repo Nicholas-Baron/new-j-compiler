@@ -494,12 +494,12 @@ void program::print_human_readable(std::ostream & lhs) const {
 
     lhs << ".text:\n";
     auto pc = pc_start;
-    for (auto inst : this->bytecode) {
+    for (auto & inst : this->bytecode) {
         if (auto label = label_map.find(pc); label != label_map.end()) {
             lhs << label->second << ":\n";
         }
 
-        lhs << std::hex << pc << " : ";
+        lhs << std::hex << std::showbase << pc << " : ";
         inst.print_human_readable(lhs);
         lhs << std::endl;
         pc += 8;
