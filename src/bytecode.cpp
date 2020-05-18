@@ -4,6 +4,7 @@
 
 #include "bytecode.h"
 
+#include <iomanip>
 #include <iostream>
 #include <set>
 
@@ -396,4 +397,57 @@ operation program::make_instruction(const ir::three_address & instruction,
 }
 program::register_info::register_info(uint8_t register_number, size_t first_written)
     : reg_num{register_number}, first_write{first_written}, last_read{first_written} {}
+
+void operation::print_human_readable(std::ostream & lhs) const {
+
+    // print op code
+    lhs << std::setw(3) << std::dec << static_cast<uint16_t>(this->code);
+    bool first_arg = true;
+    switch (this->data.index()) {
+    case 0:
+        for (auto val : std::get<std::array<uint8_t, 3>>(data)) {
+            if (first_arg) {
+                first_arg = false;
+                lhs << ' ';
+            } else
+                lhs << ',';
+
+            lhs << std::setw(2) << std::dec << std::to_string(val);
+        }
+        break;
+    case 1: {
+        auto & with_imm = std::get<reg_with_imm>(this->data);
+        lhs << ' ' << std::setw(2) << with_imm.registers.front() << ',' << std::setw(2)
+            << with_imm.registers.back() << ',' << std::hex << with_imm.immediate;
+    } break;
+    case 2:
+        lhs << ' ' << std::hex << std::get<uint64_t>(this->data);
+        break;
+    default:
+        lhs << "UNKNOWN DATA";
+        break;
+    }
+}
+
+void program::print_human_readable(std::ostream & lhs) const {
+
+    const std::map label_map = [this] {
+        std::map<uint64_t, std::string> label_map;
+        for (const auto & entry : this->labels) { label_map.emplace(entry.second, entry.first); }
+        return label_map;
+    }();
+
+    lhs << ".text:\n";
+    auto pc = pc_start;
+    for (auto inst : this->bytecode) {
+        if (auto label = label_map.find(pc); label != label_map.end()) {
+            lhs << label->second << ":\n";
+        }
+
+        lhs << std::hex << pc << " : ";
+        inst.print_human_readable(lhs);
+        lhs << std::endl;
+        pc += 8;
+    }
+}
 } // namespace bytecode

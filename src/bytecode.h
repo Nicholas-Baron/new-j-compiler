@@ -50,6 +50,8 @@ struct operation {
     };
 
     std::variant<std::array<uint8_t, 3>, reg_with_imm, uint64_t> data;
+
+    void print_human_readable(std::ostream &) const;
 };
 
 static constexpr uint64_t pc_start = 0x80000000;
@@ -57,6 +59,8 @@ static constexpr uint64_t pc_start = 0x80000000;
 class program {
   public:
     static std::optional<program> from_ir(const ir::program &);
+
+    void print_human_readable(std::ostream &) const;
 
   private:
     struct register_info {
