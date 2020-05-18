@@ -515,8 +515,7 @@ void program::make_instruction(const ir::three_address & instruction,
             const auto & false_dest = std::get<std::string>(instruction.operands.back().data);
 
             switch (cond_inst->op) {
-            case ir::operation::eq: {
-
+            case ir::operation::eq:
                 if (not lhs.is_immediate and not rhs.is_immediate) {
                     auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
                     auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
@@ -531,10 +530,32 @@ void program::make_instruction(const ir::three_address & instruction,
                     } else {
                         append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
                     }
+                } else if (lhs.is_immediate and not rhs.is_immediate) {
+                    auto lhs_val = std::get<long>(lhs.data);
+                    {
+                        auto [first, second] = load_64_bits(1, lhs_val);
+                        if (first.has_value()) append_instruction(std::move(*first));
+                        append_instruction(std::move(second));
+                    }
+                    append_instruction(
+                        opcode::jeq,
+                        make_reg_with_imm(1, 0, read_label(true_dest, false, text_end)));
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+                } else if (not lhs.is_immediate and rhs.is_immediate) {
+                    auto rhs_val = std::get<long>(rhs.data);
+                    {
+                        auto [first, second] = load_64_bits(1, rhs_val);
+                        if (first.has_value()) append_instruction(std::move(*first));
+                        append_instruction(std::move(second));
+                    }
+                    append_instruction(
+                        opcode::jeq,
+                        make_reg_with_imm(1, 0, read_label(true_dest, false, text_end)));
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
                 } else {
                     std::cerr << "Cannot generate jeq for " << *cond_inst << std::endl;
                 }
-            } break;
+                break;
                 /*
             case ir::operation::ne:
                 break;
@@ -552,6 +573,9 @@ void program::make_instruction(const ir::three_address & instruction,
                           << std::endl;
             }
         }
+        break;
+    case ir::operation::le:
+    case ir::operation::eq:
         break;
     default:
         std::cerr << "Instruction " << instruction << " cannot be translated to bytecode.\n";
