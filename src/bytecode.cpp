@@ -317,6 +317,15 @@ operation program::make_instruction(const ir::three_address & instruction,
         break;
 
     case ir::operation::ret:
+        if (not instruction.operands.empty()) {
+            uint8_t ret_loc = return_value_start;
+            for (auto & val : instruction.operands)
+                bytecode.push_back(
+                    {opcode::ori,
+                     make_reg_with_imm(ret_loc++,
+                                       get_register_info(std::get<std::string>(val.data)).reg_num,
+                                       0)});
+        }
         next_op.code = opcode::jr;
         next_op.data = std::array<uint8_t, 3>{63, 0, 0};
         break;
