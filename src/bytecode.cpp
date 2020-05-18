@@ -120,7 +120,7 @@ void program::generate_bytecode(const ir::function & function) {
         // Should loop in a sorted order
         for (const auto & reg : used_registers)
             if (reg == last_reg) last_reg++;
-            else
+            else if (reg > last_reg)
                 break;
 
         if (last_reg >= temp_end) { std::cerr << "Too many temporaries" << std::endl; }
@@ -168,7 +168,7 @@ void program::generate_bytecode(const ir::function & function) {
                 if (not input.is_immediate and input.type != ir::ir_type::str) {
                     // Either a user defined variable or compiler temporary
                     auto name = std::get<std::string>(input.data);
-                    register_alloc.at(name).last_read = ir_inst_num;
+                    register_alloc.at(name).reads.push_back(ir_inst_num);
                 }
             }
 
@@ -418,32 +418,66 @@ operation program::make_instruction(const ir::three_address & instruction,
         }
     } break;
     case ir::operation::call: {
-        uint8_t param_reg = param_start;
-        for (auto iter = instruction.operands.begin() + 1; iter != instruction.operands.end();
-             ++iter) {
-            if (not iter->is_immediate)
-                append_instruction(
-                    opcode::or_, std::array<uint8_t, 3>{
-                                     param_reg++, 0,
-                                     get_register_info(std::get<std::string>(iter->data)).reg_num});
-        }
 
         const auto & func_name
             = std::get<std::string>(instruction.operands.at(res.has_value()).data);
 
-        if (func_name == "print") {
-            next_op = print(instruction, register_alloc);
-            break;
-        }
         // Determine which items to save
         std::set registers_to_save{stack_pointer, frame_pointer, return_address};
         for (const auto & entry : register_alloc) {
-            if (entry.second.last_read >= inst_num
-                and registers_to_save.count(entry.second.reg_num) == 0)
-                registers_to_save.insert(entry.second.reg_num);
+            const auto & reg_info = entry.second;
+            const auto & writes = reg_info.writes;
+            const auto & reads = reg_info.reads;
+
+            // check that we are in between a write and a read
+            bool written_to = false;
+            size_t write_loc = 0;
+            // find the latest write before us
+            for (const auto & write : writes) {
+                if (write <= inst_num) {
+                    write_loc = std::max(write_loc, write);
+                    written_to = true;
+                }
+            }
+
+            if (not written_to) continue;
+
+            size_t read_loc = write_loc;
+            // find the earliest read after us
+            for (const auto & read : reads) {
+                if (read < read_loc) continue;
+                else if (read > inst_num) {
+                    read_loc = read;
+                    break;
+                }
+            }
+
+            if (inst_num > write_loc and inst_num < read_loc) {
+                // save that register
+                registers_to_save.insert(reg_info.reg_num);
+            }
         }
 
-        auto stack_size = static_cast<uint32_t>(registers_to_save.size() * -8);
+        const auto stack_size = static_cast<uint32_t>(registers_to_save.size() * -8);
+
+        // Setup arguments
+        const auto setup_args = [&operands = instruction.operands, this, &get_register_info] {
+            uint8_t param_reg = param_start;
+            for (auto iter = operands.begin() + 1; iter != operands.end(); ++iter) {
+                if (not iter->is_immediate)
+                    append_instruction(
+                        opcode::or_,
+                        std::array<uint8_t, 3>{
+                            param_reg++, 0,
+                            get_register_info(std::get<std::string>(iter->data)).reg_num});
+            }
+        };
+
+        if (func_name == "print") {
+            setup_args();
+            next_op = print(instruction, register_alloc);
+            break;
+        }
 
         append_instruction(opcode::addi,
                            make_reg_with_imm(stack_pointer, stack_pointer, stack_size));
@@ -454,6 +488,7 @@ operation program::make_instruction(const ir::three_address & instruction,
             offset += 8;
         }
 
+        setup_args();
         append_instruction(opcode::jal, labels.at(func_name));
 
         // TODO: Implement multiple return value copies
@@ -479,7 +514,7 @@ operation program::make_instruction(const ir::three_address & instruction,
     return next_op;
 }
 program::register_info::register_info(uint8_t register_number, size_t first_written)
-    : reg_num{register_number}, writes{first_written}, last_read{first_written} {}
+    : reg_num{register_number}, writes{first_written}, reads{} {}
 
 void operation::print_human_readable(std::ostream & lhs) const {
 

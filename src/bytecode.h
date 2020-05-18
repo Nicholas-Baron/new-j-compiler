@@ -68,7 +68,7 @@ class program {
     struct register_info {
         uint8_t reg_num;
         std::vector<size_t> writes;
-        size_t last_read;
+        std::vector<size_t> reads;
 
         register_info(uint8_t register_number, size_t first_written);
     };
