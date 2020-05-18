@@ -186,7 +186,7 @@ void program::generate_bytecode(const ir::function & function) {
 }
 uint64_t program::append_data(const std::string & item) {
     auto to_ret = this->data.size() + data_start;
-    for (char c : item) data.push_back(c);
+    for (size_t i = 1; i < item.size() - 1; i++) data.push_back(item.at(i));
     data.push_back('\0');
     return to_ret;
 }
