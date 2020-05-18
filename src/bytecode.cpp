@@ -174,8 +174,7 @@ void program::generate_bytecode(const ir::function & function) {
     for (auto & block : function.body) {
         labels.emplace(block->name, text_end);
         for (auto & instruction : block->contents) {
-            this->bytecode.push_back(make_instruction(instruction, register_alloc, ir_inst_num++));
-            text_end += 8;
+            append_instruction(make_instruction(instruction, register_alloc, ir_inst_num++));
         }
     }
 }
@@ -219,20 +218,18 @@ operation program::make_instruction(const ir::three_address & instruction,
             }
         } else if (lhs.is_immediate and not rhs.is_immediate) {
             // ori lhs + add rhs
-            bytecode.push_back(
-                {opcode::ori, make_reg_with_imm(result_reg, 0,
-                                                static_cast<uint32_t>(std::get<long>(lhs.data)))});
-            text_end += 8;
+            append_instruction(
+                opcode::ori,
+                make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(lhs.data))));
 
             next_op.code = opcode::add;
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
             next_op.data = std::array{result_reg, result_reg, rhs_reg};
         } else if (rhs.is_immediate and not lhs.is_immediate) {
             // ori rhs + add lhs
-            bytecode.push_back(
-                {opcode::ori, make_reg_with_imm(result_reg, 0,
-                                                static_cast<uint32_t>(std::get<long>(rhs.data)))});
-            text_end += 8;
+            append_instruction(
+                opcode::ori,
+                make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(rhs.data))));
 
             next_op.code = opcode::add;
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
@@ -257,8 +254,7 @@ operation program::make_instruction(const ir::three_address & instruction,
             case ir::ir_type::str: {
                 auto [first, second]
                     = load_64_bits(result_reg, append_data(std::get<std::string>(src.data)));
-                bytecode.push_back(first);
-                text_end += 8;
+                append_instruction(std::move(first));
                 next_op = second;
             } break;
             case ir::ir_type::i32:
@@ -268,8 +264,7 @@ operation program::make_instruction(const ir::three_address & instruction,
                 break;
             case ir::ir_type::i64: {
                 auto [first, second] = load_64_bits(result_reg, std::get<long>(src.data));
-                bytecode.push_back(first);
-                text_end += 8;
+                append_instruction(std::move(first));
                 next_op = second;
             } break;
             default:
@@ -285,9 +280,7 @@ operation program::make_instruction(const ir::three_address & instruction,
         if (lhs.is_immediate and rhs.is_immediate) {
             uint64_t val = std::get<long>(lhs.data) | std::get<long>(rhs.data);
             if (val >= UINT32_MAX) {
-
-                bytecode.push_back({opcode::lui, make_reg_with_imm(result_reg, 0, val >> 32u)});
-                text_end += 8;
+                append_instruction(opcode::lui, make_reg_with_imm(result_reg, 0, val >> 32u));
                 val &= mask_low_32_bit;
             }
 
@@ -320,14 +313,13 @@ operation program::make_instruction(const ir::three_address & instruction,
         if (not instruction.operands.empty()) {
             uint8_t ret_loc = return_value_start;
             for (auto & val : instruction.operands)
-                bytecode.push_back(
-                    {opcode::ori,
-                     make_reg_with_imm(ret_loc++,
-                                       get_register_info(std::get<std::string>(val.data)).reg_num,
-                                       0)});
+                append_instruction(
+                    opcode::ori,
+                    make_reg_with_imm(
+                        ret_loc++, get_register_info(std::get<std::string>(val.data)).reg_num, 0));
         }
         next_op.code = opcode::jr;
-        next_op.data = std::array<uint8_t, 3>{63, 0, 0};
+        next_op.data = std::array<uint8_t, 3>{return_address, 0, 0};
         break;
     case ir::operation::shift_left: {
         auto lhs = instruction.operands.at(1);
@@ -386,11 +378,10 @@ operation program::make_instruction(const ir::three_address & instruction,
         for (auto iter = instruction.operands.begin() + 1; iter != instruction.operands.end();
              ++iter) {
             if (not iter->is_immediate)
-                bytecode.push_back(
-                    {opcode::ori,
-                     std::array<uint8_t, 3>{
-                         param_reg++, 0,
-                         get_register_info(std::get<std::string>(iter->data)).reg_num}});
+                append_instruction(
+                    opcode::ori, std::array<uint8_t, 3>{
+                                     param_reg++, 0,
+                                     get_register_info(std::get<std::string>(iter->data)).reg_num});
         }
 
         const auto & func_name
@@ -409,30 +400,30 @@ operation program::make_instruction(const ir::three_address & instruction,
 
         auto stack_size = static_cast<uint16_t>(registers_to_save.size() * -8);
 
-        bytecode.push_back(
-            {opcode::addi, make_reg_with_imm(stack_pointer, stack_pointer, stack_size)});
+        append_instruction(opcode::addi,
+                           make_reg_with_imm(stack_pointer, stack_pointer, stack_size));
 
         {
             uint16_t offset = 0;
             for (auto reg : registers_to_save) {
-                bytecode.push_back({opcode::sqw, make_reg_with_imm(reg, stack_pointer, offset)});
+                append_instruction(opcode::sqw, make_reg_with_imm(reg, stack_pointer, offset));
                 offset += 8;
             }
         }
 
-        bytecode.push_back({opcode::jal, labels.at(func_name)});
+        append_instruction(opcode::jal, labels.at(func_name));
 
         // TODO: Implement multiple return value copies
         if (res.has_value()) {
             // Some return value (the register has already been allocated)
             auto dest_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
-            bytecode.push_back({opcode::ori, make_reg_with_imm(dest_reg, return_value_start, 0)});
+            append_instruction(opcode::ori, make_reg_with_imm(dest_reg, return_value_start, 0));
         }
 
         {
             uint16_t offset = 0;
             for (auto reg : registers_to_save) {
-                bytecode.push_back({opcode::lqw, make_reg_with_imm(reg, stack_pointer, offset)});
+                append_instruction(opcode::lqw, make_reg_with_imm(reg, stack_pointer, offset));
                 offset += 8;
             }
         }
@@ -505,4 +496,10 @@ void program::print_human_readable(std::ostream & lhs) const {
         pc += 8;
     }
 }
+
+void program::append_instruction(operation && op) {
+    bytecode.push_back(op);
+    text_end += 8;
+}
+
 } // namespace bytecode

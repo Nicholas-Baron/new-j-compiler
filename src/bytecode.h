@@ -77,6 +77,11 @@ class program {
     operation make_instruction(const ir::three_address &, std::map<std::string, register_info> &,
                                size_t);
 
+    void append_instruction(operation &&);
+    void append_instruction(opcode op, decltype(operation::data) && data) {
+        append_instruction({op, data});
+    }
+
     operation print(const ir::three_address &, const std::map<std::string, register_info> &);
 
     std::vector<char> data{};
