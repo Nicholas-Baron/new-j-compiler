@@ -79,14 +79,10 @@ std::optional<program> program::from_ir(const ir::program & input) {
     if (main_func == nullptr) return {};
 
     bytecode::program output{};
+    output.generate_bytecode(*main_func);
 
     input.for_each_func([&output, main_func](auto * func) {
-        if (func == nullptr) return;
-
-        if (func == main_func)
-            output.main_offset = static_cast<uint32_t>(output.text_end - pc_start);
-
-        output.generate_bytecode(*func);
+        if (func != nullptr and func != main_func) output.generate_bytecode(*func);
     });
 
     return output;
@@ -104,7 +100,7 @@ constexpr uint8_t return_address = 63;
 
 void program::generate_bytecode(const ir::function & function) {
 
-    labels.emplace(function.name, text_end);
+    assign_label(function.name, text_end);
 
     std::map<std::string, register_info> register_alloc;
     auto register_for_operand = [&register_alloc](const ir::operand & operand) -> register_info & {
@@ -178,7 +174,7 @@ void program::generate_bytecode(const ir::function & function) {
 
     ir_inst_num = 0;
     for (auto & block : function.body) {
-        labels.emplace(block->name, text_end);
+        assign_label(block->name, text_end);
         for (auto & instruction : block->contents) {
             append_instruction(make_instruction(instruction, register_alloc, ir_inst_num++));
         }
@@ -489,7 +485,7 @@ operation program::make_instruction(const ir::three_address & instruction,
         }
 
         setup_args();
-        append_instruction(opcode::jal, labels.at(func_name));
+        append_instruction(opcode::jal, read_label(func_name, true, text_end));
 
         // TODO: Implement multiple return value copies
         if (res.has_value()) {
@@ -582,6 +578,40 @@ void program::print_human_readable(std::ostream & lhs) const {
 void program::append_instruction(operation && op) {
     bytecode.push_back(op);
     text_end += 8;
+}
+void program::assign_label(const std::string & label, size_t bytecode_loc) {
+    labels.emplace(label, text_end);
+
+    std::vector<size_t> fulfilled;
+    for (auto & entry : label_queue)
+        if (entry.second.first == label) {
+            auto & inst = bytecode.at((entry.first - pc_start) / 8);
+            if (entry.second.second) {
+                // use absolute addressing
+                inst.data = bytecode_loc >> 3u;
+            } else {
+                // use relative addressing
+                auto dist = bytecode_loc - (entry.first + 8);
+                std::get<operation::reg_with_imm>(inst.data).immediate = dist >> 3u;
+            }
+            fulfilled.push_back(entry.first);
+        }
+
+    for (auto & satisfied : fulfilled) label_queue.erase(satisfied);
+}
+size_t program::read_label(const std::string & label, bool absolute, size_t bytecode_loc) {
+    if (labels.count(label) == 0) {
+        // Label does not exist. Fake it
+        label_queue.insert(std::make_pair(bytecode_loc, std::make_pair(label, absolute)));
+        return 0;
+    }
+
+    auto & addr = labels.at(label);
+    if (absolute) return addr >> 3u;
+    else {
+        auto dist = bytecode_loc - (addr + 8);
+        return dist >> 3u;
+    }
 }
 
 } // namespace bytecode

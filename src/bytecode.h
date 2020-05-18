@@ -83,6 +83,10 @@ class program {
         append_instruction({op, data});
     }
 
+    std::map<size_t, std::pair<std::string, bool /* is absolute*/>> label_queue;
+    void assign_label(const std::string &, size_t bytecode_loc);
+    size_t read_label(const std::string &, bool absolute, size_t bytecode_loc);
+
     operation print(const ir::three_address &, const std::map<std::string, register_info> &);
 
     std::vector<char> data{};
@@ -91,7 +95,6 @@ class program {
     std::map<std::string, uint64_t> labels{};
 
     uint64_t text_end = pc_start;
-    uint32_t main_offset{0};
 };
 } // namespace bytecode
 
