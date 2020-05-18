@@ -14,10 +14,14 @@ std::optional<program> program::from_ir(const ir::program & input) {
     if (main_func == nullptr) return {};
 
     bytecode::program output{};
-    output.generate_bytecode(*main_func);
 
     input.for_each_func([&output, main_func](auto * func) {
-        if (func != main_func and func != nullptr) output.generate_bytecode(*func);
+        if (func == nullptr) return;
+
+        if (func == main_func)
+            output.main_offset = static_cast<uint32_t>(output.text_end - pc_start);
+
+        output.generate_bytecode(*func);
     });
 
     return output;

@@ -63,7 +63,7 @@ class program {
         uint8_t reg_num;
         size_t first_write;
         size_t last_read;
-        
+
         register_info(uint8_t register_number, size_t first_written);
     };
 
@@ -78,6 +78,7 @@ class program {
     std::map<std::string, uint64_t> labels{};
 
     uint64_t text_end = pc_start;
+    uint32_t main_offset{0};
 };
 } // namespace bytecode
 
