@@ -608,10 +608,10 @@ void operation::print_human_readable(std::ostream & lhs) const {
         auto right_reg = std::to_string(with_imm.registers.back());
 
         lhs << std::setw(2) << left_reg << comma << std::setw(2) << right_reg << comma << std::hex
-            << std::showbase << with_imm.immediate;
+            << "#x" << with_imm.immediate;
     } break;
     case 2:
-        lhs << std::hex << std::showbase << std::get<uint64_t>(this->data);
+        lhs << std::hex << "#x" << std::get<uint64_t>(this->data);
         break;
     default:
         lhs << "UNKNOWN DATA";
