@@ -558,7 +558,14 @@ void program::print_human_readable(std::ostream & lhs) const {
         return label_map;
     }();
 
-    lhs << ".text:\n";
+    lhs << ".data:\n";
+    uint8_t byte_in_word = 0;
+    for (auto & byte : this->data) {
+        ++byte_in_word %= 8;
+        lhs << std::hex << (int)byte << (byte_in_word == 0 ? '\n' : ' ');
+    }
+
+    lhs << "\n.text:\n";
     auto pc = pc_start;
     for (auto & inst : this->bytecode) {
         if (auto label = label_map.find(pc); label != label_map.end()) {
