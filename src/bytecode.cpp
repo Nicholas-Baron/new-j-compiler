@@ -404,17 +404,15 @@ operation program::make_instruction(const ir::three_address & instruction,
                 registers_to_save.push_back(entry.second.reg_num);
         }
 
-        auto stack_size = static_cast<uint16_t>(registers_to_save.size() * -8);
+        auto stack_size = static_cast<uint32_t>(registers_to_save.size() * -8);
 
         append_instruction(opcode::addi,
                            make_reg_with_imm(stack_pointer, stack_pointer, stack_size));
 
-        {
-            uint16_t offset = 0;
-            for (auto reg : registers_to_save) {
-                append_instruction(opcode::sqw, make_reg_with_imm(reg, stack_pointer, offset));
-                offset += 8;
-            }
+        uint16_t offset = 0;
+        for (auto reg : registers_to_save) {
+            append_instruction(opcode::sqw, make_reg_with_imm(reg, stack_pointer, offset));
+            offset += 8;
         }
 
         append_instruction(opcode::jal, labels.at(func_name));
@@ -426,12 +424,9 @@ operation program::make_instruction(const ir::three_address & instruction,
             append_instruction(opcode::ori, make_reg_with_imm(dest_reg, return_value_start, 0));
         }
 
-        {
-            uint16_t offset = 0;
-            for (auto reg : registers_to_save) {
-                append_instruction(opcode::lqw, make_reg_with_imm(reg, stack_pointer, offset));
-                offset += 8;
-            }
+        for (auto iter = registers_to_save.rbegin(); iter != registers_to_save.rend(); ++iter) {
+            offset -= 8;
+            append_instruction(opcode::lqw, make_reg_with_imm(*iter, stack_pointer, offset));
         }
 
         next_op.code = opcode::addi;
