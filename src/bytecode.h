@@ -26,6 +26,7 @@ enum class opcode : uint16_t {
     sli,
     sri,
     slt,
+    addi,
     jmp = 100,
     jal,
     jeq,
@@ -65,7 +66,7 @@ class program {
   private:
     struct register_info {
         uint8_t reg_num;
-        size_t first_write;
+        std::vector<size_t> writes;
         size_t last_read;
 
         register_info(uint8_t register_number, size_t first_written);

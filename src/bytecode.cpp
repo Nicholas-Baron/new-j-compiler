@@ -86,11 +86,15 @@ std::optional<program> program::from_ir(const ir::program & input) {
     return output;
 }
 
+constexpr uint8_t return_value_start = 10;
 constexpr uint8_t param_start = 13;
 constexpr uint8_t param_end = 19;
 constexpr auto max_inputs = (param_end - param_start) + 1;
 constexpr uint8_t temp_start = 20;
-constexpr uint8_t temp_end = 61;
+constexpr uint8_t stack_pointer = 61;
+constexpr auto temp_end = stack_pointer;
+constexpr uint8_t frame_pointer = 62;
+constexpr uint8_t return_address = 63;
 
 void program::generate_bytecode(const ir::function & function) {
 
@@ -115,8 +119,13 @@ void program::generate_bytecode(const ir::function & function) {
 
         if (last_reg >= temp_end) { std::cerr << "Too many temporaries" << std::endl; }
 
-        register_alloc.insert_or_assign(std::get<std::string>(operand.data),
-                                        register_info{last_reg, instruction});
+        const auto & ir_name = std::get<std::string>(operand.data);
+        if (auto iter = register_alloc.find(ir_name); iter != register_alloc.end()) {
+            iter->second.writes.push_back(instruction);
+        } else {
+            register_alloc.insert(iter,
+                                  std::make_pair(ir_name, register_info{last_reg, instruction}));
+        }
     };
 
     // Parameters start at 13 and end at 19
@@ -364,29 +373,63 @@ operation program::make_instruction(const ir::three_address & instruction,
         }
     } break;
     case ir::operation::call: {
-        if (res.has_value()) {
-            // Some return value (the register has already been allocated)
-        } else {
-            // Void function
-            uint8_t param_reg = param_start;
-            for (auto iter = instruction.operands.begin() + 1; iter != instruction.operands.end();
-                 ++iter) {
-                if (not iter->is_immediate)
-                    bytecode.push_back(
-                        {opcode::ori,
-                         std::array<uint8_t, 3>{
-                             param_reg++, 0,
-                             get_register_info(std::get<std::string>(iter->data)).reg_num}});
-            }
+        uint8_t param_reg = param_start;
+        for (auto iter = instruction.operands.begin() + 1; iter != instruction.operands.end();
+             ++iter) {
+            if (not iter->is_immediate)
+                bytecode.push_back(
+                    {opcode::ori,
+                     std::array<uint8_t, 3>{
+                         param_reg++, 0,
+                         get_register_info(std::get<std::string>(iter->data)).reg_num}});
+        }
 
-            const auto & func_name = std::get<std::string>(instruction.operands.front().data);
-            if (func_name == "print") {
-                next_op = print(instruction, register_alloc);
-            } else {
-                next_op.code = opcode::jal;
-                next_op.data = labels.at(func_name);
+        const auto & func_name
+            = std::get<std::string>(instruction.operands.at(res.has_value()).data);
+
+        if (func_name == "print") {
+            next_op = print(instruction, register_alloc);
+            break;
+        }
+        // Determine which items to save
+        std::vector<uint8_t> registers_to_save{stack_pointer, frame_pointer, return_address};
+        for (const auto & entry : register_alloc) {
+            if (entry.second.last_read >= inst_num)
+                registers_to_save.push_back(entry.second.reg_num);
+        }
+
+        auto stack_size = static_cast<uint16_t>(registers_to_save.size() * -8);
+
+        bytecode.push_back(
+            {opcode::addi, make_reg_with_imm(stack_pointer, stack_pointer, stack_size)});
+
+        {
+            uint16_t offset = 0;
+            for (auto reg : registers_to_save) {
+                bytecode.push_back({opcode::sqw, make_reg_with_imm(reg, stack_pointer, offset)});
+                offset += 8;
             }
         }
+
+        bytecode.push_back({opcode::jal, labels.at(func_name)});
+
+        // TODO: Implement multiple return value copies
+        if (res.has_value()) {
+            // Some return value (the register has already been allocated)
+            auto dest_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
+            bytecode.push_back({opcode::ori, make_reg_with_imm(dest_reg, return_value_start, 0)});
+        }
+
+        {
+            uint16_t offset = 0;
+            for (auto reg : registers_to_save) {
+                bytecode.push_back({opcode::lqw, make_reg_with_imm(reg, stack_pointer, offset)});
+                offset += 8;
+            }
+        }
+
+        next_op.code = opcode::addi;
+        next_op.data = make_reg_with_imm(stack_pointer, stack_pointer, -stack_size);
     } break;
     default:
         std::cerr << "Instruction " << instruction << " cannot be translated to bytecode.\n";
@@ -396,7 +439,7 @@ operation program::make_instruction(const ir::three_address & instruction,
     return next_op;
 }
 program::register_info::register_info(uint8_t register_number, size_t first_written)
-    : reg_num{register_number}, first_write{first_written}, last_read{first_written} {}
+    : reg_num{register_number}, writes{first_written}, last_read{first_written} {}
 
 void operation::print_human_readable(std::ostream & lhs) const {
 
