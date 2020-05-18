@@ -423,7 +423,7 @@ operation program::make_instruction(const ir::three_address & instruction,
              ++iter) {
             if (not iter->is_immediate)
                 append_instruction(
-                    opcode::ori, std::array<uint8_t, 3>{
+                    opcode::or_, std::array<uint8_t, 3>{
                                      param_reg++, 0,
                                      get_register_info(std::get<std::string>(iter->data)).reg_num});
         }
@@ -436,10 +436,11 @@ operation program::make_instruction(const ir::three_address & instruction,
             break;
         }
         // Determine which items to save
-        std::vector<uint8_t> registers_to_save{stack_pointer, frame_pointer, return_address};
+        std::set registers_to_save{stack_pointer, frame_pointer, return_address};
         for (const auto & entry : register_alloc) {
-            if (entry.second.last_read >= inst_num)
-                registers_to_save.push_back(entry.second.reg_num);
+            if (entry.second.last_read >= inst_num
+                and registers_to_save.count(entry.second.reg_num) == 0)
+                registers_to_save.insert(entry.second.reg_num);
         }
 
         auto stack_size = static_cast<uint32_t>(registers_to_save.size() * -8);
