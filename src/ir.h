@@ -73,6 +73,8 @@ struct basic_block {
 struct function {
     explicit function(std::string name) : name{std::move(name)} {}
 
+    three_address * instruction_number(size_t) const;
+
     std::string name;
     std::vector<operand> parameters;
     std::vector<std::unique_ptr<basic_block>> body;

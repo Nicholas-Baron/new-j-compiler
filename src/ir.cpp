@@ -5,6 +5,7 @@
 #include "ir.h"
 
 #include <algorithm>
+#include <iostream>
 #include <ostream>
 
 namespace ir {
@@ -270,6 +271,20 @@ std::vector<operand> three_address::inputs() const {
     case operation::ret:
     case operation::store:
         return operands;
+    default:
+        std::cerr << "Unimplemented ir inputs helper" << *this << std::endl;
+        return {};
     }
+}
+three_address * function::instruction_number(size_t pos) const {
+    size_t block_num = 0;
+    while (block_num < body.size() and pos >= this->body.at(block_num)->contents.size()) {
+        pos -= this->body.at(block_num)->contents.size();
+        block_num++;
+    }
+
+    if (block_num >= body.size()) return nullptr;
+    else
+        return &body.at(block_num)->contents.at(pos);
 }
 } // namespace ir
