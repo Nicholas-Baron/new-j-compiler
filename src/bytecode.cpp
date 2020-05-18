@@ -176,7 +176,8 @@ void program::generate_bytecode(const ir::function & function) {
     for (auto & block : function.body) {
         assign_label(block->name, text_end);
         for (auto & instruction : block->contents) {
-            append_instruction(make_instruction(instruction, register_alloc, ir_inst_num++));
+            append_instruction(
+                make_instruction(instruction, register_alloc, ir_inst_num++, function));
         }
     }
 }
@@ -188,7 +189,7 @@ uint64_t program::append_data(const std::string & item) {
 }
 operation program::make_instruction(const ir::three_address & instruction,
                                     std::map<std::string, register_info> & register_alloc,
-                                    size_t inst_num) {
+                                    size_t inst_num, const ir::function & func) {
     operation next_op;
 
     // TODO: record the last written times
@@ -502,6 +503,61 @@ operation program::make_instruction(const ir::three_address & instruction,
         next_op.code = opcode::addi;
         next_op.data = make_reg_with_imm(stack_pointer, stack_pointer, -stack_size);
     } break;
+    case ir::operation::branch:
+        if (instruction.operands.size() == 1) {
+            next_op.code = opcode::jmp;
+            next_op.data = read_label(std::get<std::string>(instruction.operands.front().data),
+                                      true, text_end);
+        } else {
+            // conditional branch
+            const auto & condition = std::get<std::string>(instruction.operands.front().data);
+
+            const auto & writes = register_alloc.at(condition).writes;
+            size_t write_loc = 0;
+            for (auto & write : writes)
+                if (write < inst_num) write_loc = std::max(write_loc, write);
+
+            auto * cond_inst = func.instruction_number(write_loc);
+            if (cond_inst == nullptr) {
+                std::cerr << "Could determine condition for " << instruction << std::endl;
+                break;
+            }
+
+            switch (cond_inst->op) {
+            case ir::operation::eq: {
+                next_op.code = opcode::jeq;
+
+                const auto & lhs = cond_inst->operands.at(1);
+                const auto & rhs = cond_inst->operands.at(2);
+                const auto & true_dest = std::get<std::string>(instruction.operands.at(1).data);
+
+                if (not lhs.is_immediate and not rhs.is_immediate) {
+                    auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+                    auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+                    next_op.data = make_reg_with_imm(lhs_reg, rhs_reg,
+                                                     read_label(true_dest, false, text_end));
+                } else {
+                    std::cerr << "Cannot generate jeq for " << *cond_inst << std::endl;
+                }
+            } break;
+                /*
+            case ir::operation::ne:
+                break;
+            case ir::operation::ge:
+                break;
+            case ir::operation::gt:
+                break;
+            case ir::operation::le:
+                break;
+            case ir::operation::lt:
+                break;
+                 */
+            default:
+                std::cerr << "Instruction " << *cond_inst << " is not a valid condition"
+                          << std::endl;
+            }
+        }
+        break;
     default:
         std::cerr << "Instruction " << instruction << " cannot be translated to bytecode.\n";
         break;
