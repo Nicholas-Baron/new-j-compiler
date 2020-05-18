@@ -15,6 +15,8 @@
             settings.print_syntax = true;
         } else if (arg == "-fir-dump") {
             settings.print_ir = true;
+        } else if (arg == "-fbytecode") {
+            settings.print_bytecode = true;
         } else if (arg.front() != '-') {
             settings.input_filename = arg;
         } else {

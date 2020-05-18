@@ -48,6 +48,7 @@ int main(const int arg_count, const char ** args) {
             std::cerr << "Bytecode generation failed." << std::endl;
         } else {
             std::cout << "Bytecode generated" << std::endl;
+            if (user_args->print_bytecode) { bytecode->print_human_readable(std::cout); }
         }
     }
 }

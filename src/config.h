@@ -10,6 +10,7 @@ struct user_settings {
     bool print_help{false};
     bool print_syntax{false};
     bool print_ir{false};
+    bool print_bytecode{false};
 };
 
 [[nodiscard]] std::shared_ptr<const user_settings> parse_cmdline_args(int arg_count,
