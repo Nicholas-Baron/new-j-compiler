@@ -503,17 +503,19 @@ void program::make_instruction(const ir::three_address & instruction,
                 if (write < inst_num) write_loc = std::max(write_loc, write);
 
             auto * cond_inst = func.instruction_number(write_loc);
-            if (cond_inst == nullptr) {
+            if (cond_inst == nullptr or cond_inst->operands.size() != 3) {
                 std::cerr << "Could determine condition for " << instruction << std::endl;
                 break;
             }
 
+            const auto & lhs = cond_inst->operands.at(1);
+            const auto & rhs = cond_inst->operands.at(2);
+
+            const auto & true_dest = std::get<std::string>(instruction.operands.at(1).data);
+            const auto & false_dest = std::get<std::string>(instruction.operands.back().data);
+
             switch (cond_inst->op) {
             case ir::operation::eq: {
-
-                const auto & lhs = cond_inst->operands.at(1);
-                const auto & rhs = cond_inst->operands.at(2);
-                const auto & true_dest = std::get<std::string>(instruction.operands.at(1).data);
 
                 if (not lhs.is_immediate and not rhs.is_immediate) {
                     auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
@@ -527,7 +529,6 @@ void program::make_instruction(const ir::three_address & instruction,
                     if (lhs_val == rhs_val) {
                         append_instruction(opcode::jmp, read_label(true_dest, true, text_end));
                     } else {
-                        auto & false_dest = std::get<std::string>(instruction.operands.back().data);
                         append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
                     }
                 } else {
