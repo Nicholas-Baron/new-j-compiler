@@ -252,6 +252,50 @@ operation program::make_instruction(const ir::three_address & instruction,
         }
 
     } break;
+    case ir::operation::sub: {
+        auto lhs = instruction.operands.at(1);
+        auto rhs = instruction.operands.at(2);
+        auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
+        if (lhs.is_immediate and rhs.is_immediate) {
+            auto & lhs_value = std::get<long>(lhs.data);
+            auto & rhs_value = std::get<long>(rhs.data);
+            if (rhs_value >= INT64_MIN - lhs_value) {
+                std::cerr << "Detected negative integer overflow of " << lhs << " + " << rhs
+                          << '\n';
+            }
+            auto [first, second] = load_64_bits(result_reg, lhs_value - rhs_value);
+            if (first.has_value()) append_instruction(std::move(*first));
+            next_op = second;
+
+        } else if (lhs.is_immediate and not rhs.is_immediate) {
+            // ori lhs + sub rhs
+            append_instruction(
+                opcode::ori,
+                make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(lhs.data))));
+
+            next_op.code = opcode::sub;
+            auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+            next_op.data = std::array{result_reg, result_reg, rhs_reg};
+        } else if (rhs.is_immediate and not lhs.is_immediate) {
+            // ori rhs + sub lhs
+            append_instruction(
+                opcode::ori,
+                make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(rhs.data))));
+
+            next_op.code = opcode::sub;
+            auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+            next_op.data = std::array{result_reg, lhs_reg, result_reg};
+        } else {
+            // both are not immediates
+            // simple sub
+
+            next_op.code = opcode::add;
+
+            auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+            auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+            next_op.data = std::array{result_reg, lhs_reg, rhs_reg};
+        }
+    } break;
     case ir::operation::assign: {
         auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
         auto src = instruction.operands.back();
