@@ -213,15 +213,9 @@ operation program::make_instruction(const ir::three_address & instruction,
             if (lhs_value >= INT64_MAX - rhs_value) {
                 std::cerr << "Detected integer overflow of " << lhs << " + " << rhs << '\n';
             }
-            if (lhs_value + rhs_value <= INT32_MAX) {
-                // Just ori
-                next_op.code = opcode::ori;
-                next_op.data = make_reg_with_imm(result_reg, 0,
-                                                 static_cast<uint32_t>(lhs_value + rhs_value));
-            } else {
-                // Lui + ori
-                std::cerr << "Lui + ori combo for loading 64 bit is not implemented.\n";
-            }
+            auto [first, second] = load_64_bits(result_reg, lhs_value + rhs_value);
+            if (first.has_value()) append_instruction(std::move(*first));
+            next_op = second;
         } else if (lhs.is_immediate and not rhs.is_immediate) {
             // ori lhs + add rhs
             append_instruction(
