@@ -16,9 +16,13 @@ operation::reg_with_imm make_reg_with_imm(uint8_t dest, uint8_t src, uint32_t im
 
 constexpr auto mask_low_32_bit = 0xFFFFFFFFul;
 
-std::pair<operation, operation> load_64_bits(uint8_t dest, uint64_t val) {
-    auto first = operation{opcode::lui, make_reg_with_imm(dest, 0, val >> 32u)};
-    auto second = operation{opcode::ori, make_reg_with_imm(dest, dest, val & mask_low_32_bit)};
+std::pair<std::optional<operation>, operation> load_64_bits(uint8_t dest, uint64_t val) {
+
+    std::optional<operation> first;
+    if (val > mask_low_32_bit) first = {opcode::lui, make_reg_with_imm(dest, 0, val >> 32u)};
+
+    auto second = operation{opcode::ori, make_reg_with_imm(dest, (val > mask_low_32_bit ? dest : 0),
+                                                           val & mask_low_32_bit)};
     return std::make_pair(first, second);
 }
 operation program::print(const ir::three_address & inst,
@@ -28,25 +32,27 @@ operation program::print(const ir::three_address & inst,
     case ir::ir_type::i32:
         if (not print_val.is_immediate) {
             auto name = std::get<std::string>(print_val.data);
-            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 1)});
+            append_instruction(opcode::ori, make_reg_with_imm(1, 0, 1));
             return {opcode::syscall, make_reg_with_imm(1, reg_info.at(name).reg_num, 1)};
         } else {
             auto value = std::get<long>(print_val.data);
-            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 1)});
-            bytecode.push_back({opcode::ori, make_reg_with_imm(2, 0, value)});
+            append_instruction(opcode::ori, make_reg_with_imm(1, 0, 1));
+            append_instruction(opcode::ori, make_reg_with_imm(2, 0, value));
             return {opcode::syscall, make_reg_with_imm(1, 2, 1)};
         }
     case ir::ir_type::i64:
         if (not print_val.is_immediate) {
             auto name = std::get<std::string>(print_val.data);
-            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 5)});
+            append_instruction(opcode::ori, make_reg_with_imm(1, 0, 5));
             return {opcode::syscall, make_reg_with_imm(1, reg_info.at(name).reg_num, 1)};
         } else {
             auto value = std::get<long>(print_val.data);
-            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 5)});
+            append_instruction(opcode::ori, make_reg_with_imm(1, 0, 5));
+
             auto [first, second] = load_64_bits(2, value);
-            bytecode.push_back(first);
-            bytecode.push_back(second);
+            if (first.has_value()) append_instruction(std::move(*first));
+            append_instruction(std::move(second));
+
             return {opcode::syscall, make_reg_with_imm(1, 2, 1)};
         }
     case ir::ir_type::str:
@@ -54,9 +60,9 @@ operation program::print(const ir::three_address & inst,
             auto str_ptr = append_data(std::get<std::string>(print_val.data));
             auto [first, second] = load_64_bits(2, str_ptr);
 
-            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 4)});
-            bytecode.push_back(first);
-            bytecode.push_back(second);
+            append_instruction(opcode::ori, make_reg_with_imm(1, 0, 4));
+            if (first.has_value()) append_instruction(std::move(*first));
+            append_instruction(std::move(second));
         } else {
             std::cerr << "Tried to print string " << print_val << std::endl;
         }
@@ -254,7 +260,7 @@ operation program::make_instruction(const ir::three_address & instruction,
             case ir::ir_type::str: {
                 auto [first, second]
                     = load_64_bits(result_reg, append_data(std::get<std::string>(src.data)));
-                append_instruction(std::move(first));
+                if (first.has_value()) append_instruction(std::move(*first));
                 next_op = second;
             } break;
             case ir::ir_type::i32:
@@ -264,7 +270,7 @@ operation program::make_instruction(const ir::three_address & instruction,
                 break;
             case ir::ir_type::i64: {
                 auto [first, second] = load_64_bits(result_reg, std::get<long>(src.data));
-                append_instruction(std::move(first));
+                if (first.has_value()) append_instruction(std::move(*first));
                 next_op = second;
             } break;
             default:
