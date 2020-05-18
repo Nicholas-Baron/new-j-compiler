@@ -48,6 +48,18 @@ operation program::print(const ir::three_address & inst,
             bytecode.push_back(second);
             return {opcode::syscall, make_reg_with_imm(1, 2, 1)};
         }
+    case ir::ir_type::str:
+        if (print_val.is_immediate) {
+            auto str_ptr = append_data(std::get<std::string>(print_val.data));
+            auto [first, second] = load_64_bits(2, str_ptr);
+
+            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 4)});
+            bytecode.push_back(first);
+            bytecode.push_back(second);
+        } else {
+            std::cerr << "Tried to print string " << print_val << std::endl;
+        }
+        return {opcode::syscall, make_reg_with_imm(1, 2, 1)};
     default:
         std::cerr << "Cannot print " << print_val << std::endl;
         return {opcode::add, std::array<uint8_t, 3>{0, 0, 0}};
