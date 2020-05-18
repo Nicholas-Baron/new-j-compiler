@@ -72,6 +72,8 @@ class program {
     operation make_instruction(const ir::three_address &, std::map<std::string, register_info> &,
                                size_t);
 
+    operation print(const ir::three_address &, const std::map<std::string, register_info> &);
+
     std::vector<char> data{};
     std::vector<operation> bytecode{};
 

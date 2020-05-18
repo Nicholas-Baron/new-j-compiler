@@ -8,6 +8,52 @@
 #include <set>
 
 namespace bytecode {
+
+operation::reg_with_imm make_reg_with_imm(uint8_t dest, uint8_t src, uint32_t imm) {
+    return {{dest, src}, imm};
+}
+
+constexpr auto mask_low_32_bit = 0xFFFFFFFFul;
+
+std::pair<operation, operation> load_64_bits(uint8_t dest, uint64_t val) {
+    auto first = operation{opcode::lui, make_reg_with_imm(dest, 0, val >> 32u)};
+    auto second = operation{opcode::ori, make_reg_with_imm(dest, dest, val & mask_low_32_bit)};
+    return std::make_pair(first, second);
+}
+operation program::print(const ir::three_address & inst,
+                         const std::map<std::string, register_info> & reg_info) {
+    auto print_val = inst.inputs().back();
+    switch (print_val.type) {
+    case ir::ir_type::i32:
+        if (not print_val.is_immediate) {
+            auto name = std::get<std::string>(print_val.data);
+            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 1)});
+            return {opcode::syscall, make_reg_with_imm(1, reg_info.at(name).reg_num, 1)};
+        } else {
+            auto value = std::get<long>(print_val.data);
+            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 1)});
+            bytecode.push_back({opcode::ori, make_reg_with_imm(2, 0, value)});
+            return {opcode::syscall, make_reg_with_imm(1, 2, 1)};
+        }
+    case ir::ir_type::i64:
+        if (not print_val.is_immediate) {
+            auto name = std::get<std::string>(print_val.data);
+            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 5)});
+            return {opcode::syscall, make_reg_with_imm(1, reg_info.at(name).reg_num, 1)};
+        } else {
+            auto value = std::get<long>(print_val.data);
+            bytecode.push_back({opcode::ori, make_reg_with_imm(1, 0, 5)});
+            auto [first, second] = load_64_bits(2, value);
+            bytecode.push_back(first);
+            bytecode.push_back(second);
+            return {opcode::syscall, make_reg_with_imm(1, 2, 1)};
+        }
+    default:
+        std::cerr << "Cannot print " << print_val << std::endl;
+        return {opcode::add, std::array<uint8_t, 3>{0, 0, 0}};
+    }
+}
+
 std::optional<program> program::from_ir(const ir::program & input) {
 
     auto * main_func = input.lookup_function("main");
@@ -27,17 +73,6 @@ std::optional<program> program::from_ir(const ir::program & input) {
     return output;
 }
 
-operation::reg_with_imm make_reg_with_imm(uint8_t dest, uint8_t src, uint32_t imm) {
-    return {{dest, src}, imm};
-}
-
-constexpr auto mask_low_32_bit = 0xFFFFFFFFul;
-
-std::pair<operation, operation> load_64_bits(uint8_t dest, uint64_t val) {
-    auto first = operation{opcode::lui, make_reg_with_imm(dest, 0, val >> 32u)};
-    auto second = operation{opcode::ori, make_reg_with_imm(dest, dest, val & mask_low_32_bit)};
-    return std::make_pair(first, second);
-}
 constexpr uint8_t param_start = 13;
 constexpr uint8_t param_end = 19;
 constexpr auto max_inputs = (param_end - param_start) + 1;
@@ -315,13 +350,31 @@ operation program::make_instruction(const ir::three_address & instruction,
                                       get_register_info(std::get<std::string>(rhs.data)).reg_num};
         }
     } break;
-    case ir::operation::call:
+    case ir::operation::call: {
         if (res.has_value()) {
-            // Some return value
+            // Some return value (the register has already been allocated)
         } else {
             // Void function
+            uint8_t param_reg = param_start;
+            for (auto iter = instruction.operands.begin() + 1; iter != instruction.operands.end();
+                 ++iter) {
+                if (not iter->is_immediate)
+                    bytecode.push_back(
+                        {opcode::ori,
+                         std::array<uint8_t, 3>{
+                             param_reg++, 0,
+                             get_register_info(std::get<std::string>(iter->data)).reg_num}});
+            }
+
+            const auto & func_name = std::get<std::string>(instruction.operands.front().data);
+            if (func_name == "print") {
+                next_op = print(instruction, register_alloc);
+            } else {
+                next_op.code = opcode::jal;
+                next_op.data = labels.at(func_name);
+            }
         }
-        break;
+    } break;
     default:
         std::cerr << "Instruction " << instruction << " cannot be translated to bytecode.\n";
         break;
