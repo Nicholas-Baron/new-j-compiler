@@ -587,31 +587,43 @@ program::register_info::register_info(uint8_t register_number, size_t first_writ
 
 void operation::print_human_readable(std::ostream & lhs) const {
 
-    // print op code
-    lhs << std::setw(3) << std::dec << static_cast<uint16_t>(this->code) << ' ';
+    using std::setw, std::get, std::dec, std::hex;
+
+    // Print opcode number
+    lhs << setw(3) << dec << static_cast<uint16_t>(this->code) << ' ';
     bool first_arg = true;
     static constexpr auto comma = ", ";
+
+    static const auto print_reg
+        = [&lhs](auto & reg_num) { lhs << setw(2) << std::to_string(reg_num); };
+
+    static const auto print_imm
+        = [&lhs](auto & imm) { lhs << hex << std::noshowbase << "#x" << imm; };
+
     switch (this->data.index()) {
     case 0:
-        for (auto val : std::get<std::array<uint8_t, 3>>(data)) {
+        for (auto val : get<std::array<uint8_t, 3>>(data)) {
             if (first_arg) {
                 first_arg = false;
             } else
                 lhs << comma;
 
-            lhs << std::setw(2) << std::dec << std::to_string(val);
+            print_reg(val);
         }
         break;
     case 1: {
-        auto & with_imm = std::get<reg_with_imm>(this->data);
-        auto left_reg = std::to_string(with_imm.registers.front());
-        auto right_reg = std::to_string(with_imm.registers.back());
+        auto & with_imm = get<reg_with_imm>(this->data);
+        auto left_reg = with_imm.registers.front();
+        auto right_reg = with_imm.registers.back();
 
-        lhs << std::setw(2) << left_reg << comma << std::setw(2) << right_reg << comma << std::hex
-            << "#x" << with_imm.immediate;
+        print_reg(left_reg);
+        lhs << comma;
+        print_reg(right_reg);
+        lhs << comma;
+        print_imm(with_imm.immediate);
     } break;
     case 2:
-        lhs << std::hex << "#x" << std::get<uint64_t>(this->data);
+        print_imm(get<uint64_t>(data));
         break;
     default:
         lhs << "UNKNOWN DATA";
