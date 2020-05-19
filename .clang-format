@@ -3,7 +3,7 @@ IndentWidth: 4
 PointerAlignment: Middle
 ColumnLimit: 100
 
-AllowShortBlocksOnASingleLine: true
+AllowShortBlocksOnASingleLine: Always
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Always
 AllowShortLoopsOnASingleLine: true
@@ -21,3 +21,4 @@ IncludeCategories:
 
 Language: Cpp
 MaxEmptyLinesToKeep: 1
+SortUsingDeclarations: true
