@@ -556,14 +556,42 @@ void program::make_instruction(const ir::three_address & instruction,
                     std::cerr << "Cannot generate jeq for " << *cond_inst << std::endl;
                 }
                 break;
+            case ir::operation::le:
+                // First, do the less than and then the equal
+                if (not lhs.is_immediate and not rhs.is_immediate) {
+                    auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+                    auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+                    append_instruction(opcode::slt, std::array<uint8_t, 3>{1, lhs_reg, rhs_reg});
+                    append_instruction(
+                        opcode::jne,
+                        make_reg_with_imm(1, 0, read_label(true_dest, false, text_end)));
+                    append_instruction(opcode::jeq,
+                                       make_reg_with_imm(lhs_reg, rhs_reg,
+                                                         read_label(true_dest, false, text_end)));
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+                } else if (rhs.is_immediate and not lhs.is_immediate) {
+                    auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+                    // changes the less than or equal into just less than
+                    auto rhs_val = std::get<long>(rhs.data) + 1;
+
+                    append_instruction(opcode::slti, make_reg_with_imm(1, lhs_reg, rhs_val));
+
+                    append_instruction(
+                        opcode::jne,
+                        make_reg_with_imm(1, 0, read_label(true_dest, false, text_end)));
+
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+
+                } else {
+                    std::cerr << "Cannot generate jle for " << *cond_inst << std::endl;
+                }
+                break;
                 /*
             case ir::operation::ne:
                 break;
             case ir::operation::ge:
                 break;
             case ir::operation::gt:
-                break;
-            case ir::operation::le:
                 break;
             case ir::operation::lt:
                 break;
