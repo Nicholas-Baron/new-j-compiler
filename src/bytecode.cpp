@@ -443,20 +443,49 @@ void program::make_instruction(const ir::three_address & instruction,
         const auto stack_size = static_cast<uint32_t>(registers_to_save.size() * -8);
 
         // Setup arguments
-        const auto setup_args = [&operands = instruction.operands, this, &get_register_info] {
+        const auto setup_args = [&instruction, this, &get_register_info] {
             uint8_t param_reg = param_start;
-            for (auto iter = operands.begin() + 1; iter != operands.end(); ++iter) {
+            bool has_result = instruction.result().has_value();
+            auto & operands = instruction.operands;
+            for (auto iter = operands.begin() + (has_result ? 2 : 1); iter != operands.end();
+                 ++iter) {
                 if (not iter->is_immediate)
                     append_instruction(
                         opcode::or_,
                         std::array<uint8_t, 3>{
                             param_reg++, 0,
                             get_register_info(std::get<std::string>(iter->data)).reg_num});
+                else {
+                    switch (iter->type) {
+
+                    case ir::ir_type::boolean:
+                        append_instruction(
+                            opcode::ori,
+                            make_reg_with_imm(param_reg++, 0, std::get<bool>(iter->data) ? 1 : 0));
+                        break;
+                    case ir::ir_type::str: {
+                        auto [first, second] = load_64_bits(
+                            param_reg++, append_data(std::get<std::string>(iter->data)));
+                        if (first.has_value()) append_instruction(std::move(*first));
+                        append_instruction(std::move(second));
+                    } break;
+                    case ir::ir_type::i32:
+                    case ir::ir_type::i64: {
+                        auto [first, second]
+                            = load_64_bits(param_reg++, std::get<long>(iter->data));
+                        if (first.has_value()) append_instruction(std::move(*first));
+                        append_instruction(std::move(second));
+                    } break;
+                    default:
+                        std::cerr << "Cannot load " << *iter << " into register " << param_reg++
+                                  << '\n';
+                    }
+                }
             }
         };
 
         if (func_name == "print") {
-            setup_args();
+            // setup_args();
             append_instruction(print(instruction, register_alloc));
             break;
         }
