@@ -261,13 +261,12 @@ void program::make_instruction(const ir::three_address & instruction,
             auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
             append_instruction(opcode::sub, std::array{result_reg, result_reg, rhs_reg});
         } else if (rhs.is_immediate and not lhs.is_immediate) {
-            // ori rhs + sub lhs
-            append_instruction(
-                opcode::ori,
-                make_reg_with_imm(result_reg, 0, static_cast<uint32_t>(std::get<long>(rhs.data))));
-
+            // addi of negative rhs
             auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
-            append_instruction(opcode::sub, std::array{result_reg, lhs_reg, result_reg});
+            append_instruction(opcode::addi,
+                               make_reg_with_imm(result_reg, lhs_reg,
+                                                 static_cast<uint32_t>(-std::get<long>(rhs.data))));
+
         } else {
             // both are not immediates
             // simple sub
