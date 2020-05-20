@@ -49,6 +49,12 @@ int main(const int arg_count, const char ** args) {
         } else {
             std::cout << "Bytecode generated" << std::endl;
             if (user_args->print_bytecode) { bytecode->print_human_readable(std::cout); }
+
+            auto byte_code_dest = user_args->input_filename;
+            // Delete everything after the dot
+            byte_code_dest.erase(byte_code_dest.find_last_of('.'));
+            byte_code_dest += ".bin";
+            std::cout << "Bytecode output to " << byte_code_dest << std::endl;
         }
     }
 }
