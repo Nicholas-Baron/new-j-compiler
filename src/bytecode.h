@@ -26,6 +26,7 @@ enum class opcode : uint16_t {
     sli,
     sri,
     slt,
+    slti,
     addi,
     jmp = 100,
     jal,
