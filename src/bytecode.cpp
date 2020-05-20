@@ -4,6 +4,7 @@
 
 #include "bytecode.h"
 
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <set>
@@ -660,6 +661,42 @@ void operation::print_human_readable(std::ostream & lhs) const {
     }
 }
 
+constexpr uint8_t reg_width = 6;
+constexpr uint8_t imm_width = 32;
+constexpr uint8_t opcode_offset = 54;
+constexpr uint8_t r0_offset = opcode_offset - reg_width;
+constexpr uint8_t r1_offset = opcode_offset - (2 * reg_width);
+constexpr uint8_t r2_offset = opcode_offset - (3 * reg_width);
+constexpr uint8_t imm_offset = opcode_offset - (2 * reg_width + imm_width);
+
+uint64_t operation::raw_form() const {
+
+    auto shift_field
+        = [](auto value, uint8_t amt) -> uint64_t { return static_cast<uint64_t>(value) << amt; };
+
+    auto op_area = static_cast<uint64_t>(this->code) << opcode_offset;
+
+    uint64_t data = 0;
+    switch (this->data.index()) {
+    case 0: { // Array
+        auto & reg = std::get<std::array<uint8_t, 3>>(this->data);
+        data = shift_field(reg[0], r0_offset) | shift_field(reg[1], r1_offset)
+               | shift_field(reg[2], r2_offset);
+    } break;
+    case 1: {
+        auto & reg_and_imm = std::get<reg_with_imm>(this->data);
+        data = shift_field(reg_and_imm.registers[0], r0_offset)
+               | shift_field(reg_and_imm.registers[1], r1_offset)
+               | shift_field(reg_and_imm.immediate, imm_offset);
+    } break;
+    case 2:
+        data = std::get<uint64_t>(this->data) & ~(~0ul << opcode_offset);
+        break;
+    }
+
+    return op_area | data;
+}
+
 void program::print_human_readable(std::ostream & lhs) const {
 
     const std::map label_map = [this] {
@@ -726,6 +763,102 @@ size_t program::read_label(const std::string & label, bool absolute, size_t byte
         auto dist = bytecode_loc - (addr + 8);
         return dist >> 3u;
     }
+}
+
+constexpr uint8_t magic_byte = 0x7e;
+
+void program::print_file(const std::string & filename) const {
+
+    std::vector<uint8_t> file_contents{magic_byte, 'N', 'J'};
+    file_contents.reserve(data.size() + bytecode.size() * 8);
+
+    {
+        const auto header_table = generate_header_table();
+
+        for (auto i = 0u; i < 4; i++)
+            file_contents.push_back((header_table.size() >> i * 8) & 0xFFu);
+        for (auto byt : header_table) file_contents.push_back(byt);
+    }
+
+    const auto find_in_file = [&file_contents](std::vector<uint8_t> && content) -> size_t {
+        auto iter = std::search(file_contents.begin(), file_contents.end(), content.begin(),
+                                content.end());
+        if (iter == file_contents.end()) return file_contents.size();
+        else
+            return iter - file_contents.begin();
+    };
+
+    {
+        auto data_offset = find_in_file({'.', 'd', 'a', 't', 'a', 0});
+        if (data_offset != file_contents.size() and not data.empty()) {
+            data_offset += 6;
+            auto data_pos = file_contents.size();
+            for (auto i = 0u; i < 4; i++)
+                file_contents.at(data_offset + i) = (data_pos >> i * 8u) & 0xFFu;
+        }
+
+        for (auto byt : data) file_contents.push_back(byt);
+    }
+
+    {
+        auto text_offset = find_in_file({'.', 't', 'e', 'x', 't', 0});
+        if (text_offset != file_contents.size() and not bytecode.empty()) {
+            text_offset += 6;
+            auto text_pos = file_contents.size();
+            for (auto i = 0u; i < 4; i++)
+                file_contents.at(text_offset + i) = (text_pos >> i * 8u) & 0xFFu;
+        }
+
+        for (auto inst : bytecode) {
+            auto raw_inst = inst.raw_form();
+            for (auto i = 0u; i < sizeof(raw_inst); i++)
+                file_contents.push_back((raw_inst >> i * 8) & 0xFFu);
+        }
+    }
+
+    std::ofstream outfile{filename, std::ios::binary | std::ios::out};
+    outfile.write((char *)file_contents.data(), file_contents.size());
+}
+std::vector<uint8_t> program::generate_header_table() const {
+
+    std::vector<uint8_t> header_table;
+
+    // header table
+    if (not this->data.empty()) {
+        // name of entry
+        for (auto c : ".data") header_table.push_back(c);
+        header_table.push_back('\0');
+        // byte offset
+        for (auto i = 0; i < 4; i++) header_table.push_back(0);
+        // length of section
+        auto data_length = data.size();
+        if (data_length > UINT32_MAX) std::cerr << "Data section too long\n";
+        for (auto i = 0u; i < 4; i++) header_table.push_back((data_length >> i * 8u) & 0xFFu);
+        // null byte
+        header_table.push_back('\0');
+    }
+
+    if (bytecode.empty()) std::cerr << "No runnable code generated\n";
+
+    // text entry in header table
+    for (auto c : ".text") header_table.push_back(c);
+    header_table.push_back('\0');
+    // offset to text
+    for (auto i = 0; i < 4; i++) header_table.push_back(0);
+    // length of text
+    {
+        const auto text_length = bytecode.size() * 8;
+        if (text_length > UINT32_MAX) std::cerr << "Text section too long\n";
+        for (auto i = 0u; i < 4; i++) header_table.push_back((text_length >> i * 8u) & 0xFFu);
+    }
+    header_table.push_back('\0');
+
+    if (header_table.size() > UINT32_MAX) {
+        std::cerr << "Header table too long\n";
+        return {};
+    }
+
+    return header_table;
 }
 
 } // namespace bytecode

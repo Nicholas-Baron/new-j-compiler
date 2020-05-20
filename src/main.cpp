@@ -55,6 +55,7 @@ int main(const int arg_count, const char ** args) {
             byte_code_dest.erase(byte_code_dest.find_last_of('.'));
             byte_code_dest += ".bin";
             std::cout << "Bytecode output to " << byte_code_dest << std::endl;
+            bytecode->print_file(byte_code_dest);
         }
     }
 }

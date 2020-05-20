@@ -54,6 +54,7 @@ struct operation {
     std::variant<std::array<uint8_t, 3>, reg_with_imm, uint64_t> data;
 
     void print_human_readable(std::ostream &) const;
+    uint64_t raw_form() const;
 };
 
 static constexpr uint64_t pc_start = 0x80000000;
@@ -64,6 +65,7 @@ class program {
     static std::optional<program> from_ir(const ir::program &);
 
     void print_human_readable(std::ostream &) const;
+    void print_file(const std::string & file_name) const;
 
   private:
     struct register_info {
@@ -89,6 +91,8 @@ class program {
     size_t read_label(const std::string &, bool absolute, size_t bytecode_loc);
 
     operation print(const ir::three_address &, const std::map<std::string, register_info> &);
+
+    std::vector<uint8_t> generate_header_table() const;
 
     std::vector<char> data{};
     std::vector<operation> bytecode{};
