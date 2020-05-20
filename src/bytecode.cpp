@@ -335,7 +335,7 @@ void program::make_instruction(const ir::three_address & instruction,
         append_instruction(
             opcode::syscall,
             make_reg_with_imm(get_register_info(std::get<std::string>(res.value().data)).reg_num, 0,
-                              0));
+                              5));
         break;
 
     case ir::operation::ret:
