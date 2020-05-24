@@ -37,6 +37,8 @@ enum struct token_type {
     Lt,
     Minus,
     Minus_Assign,
+    Mult,
+    Mult_Assign,
     Newline,
     Plus,
     Plus_Assign,
@@ -83,6 +85,18 @@ class token final {
     [[nodiscard]] auto start() const noexcept { return pos; }
     [[nodiscard]] auto end() const noexcept { return pos + len; }
     [[nodiscard]] source_t src() const noexcept { return src_text; }
+
+    [[nodiscard]] bool op_assign() const noexcept {
+        switch (tok_type) {
+        case token_type::Mult_Assign:
+        case token_type::Plus_Assign:
+        case token_type::Minus_Assign:
+        case token_type::Assign:
+            return true;
+        default:
+            return false;
+        }
+    }
 
   private:
     std::shared_ptr<const std::string> src_text;

@@ -236,6 +236,23 @@ struct var_decl final : public ast::top_level, public ast::statement {
     details detail;
 };
 
+struct assign_stmt final : public ast::statement {
+
+    assign_stmt(std::unique_ptr<ast::expression> dest, std::unique_ptr<ast::expression> value_src,
+                ast::operation oper = ast::operation::assign)
+        : dest{std::move(dest)}, value_src{std::move(value_src)}, assign_op{oper} {}
+
+    [[nodiscard]] node_type type() const noexcept final { return node_type ::assign_statement; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return dest->start_pos(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return value_src->end_pos(); }
+    [[nodiscard]] token::source_t src() const noexcept final { return dest->src(); }
+
+    std::unique_ptr<ast::expression> dest;
+    std::unique_ptr<ast::expression> value_src;
+    // If the source code use the 'op=' form, assign_op is set to just 'op'
+    ast::operation assign_op;
+};
+
 // Expressions
 struct literal_or_variable final : public ast::expression {
     explicit literal_or_variable(token && val) : val{std::move(val)} {}

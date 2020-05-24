@@ -148,8 +148,29 @@ std::unique_ptr<ast::statement> parser::parse_identifier_stmt() {
 
     if (lex.peek().type() == token_type::LParen)
         return parse_call(std::make_unique<ast::literal_or_variable>(std::move(identifier)));
-    else {
-        std::cerr << "Unexpected token after identifier " << lex.peek();
+    else if (lex.peek().op_assign()) {
+        auto id_expr = std::make_unique<ast::literal_or_variable>(std::move(identifier));
+        auto op = consume();
+        auto expr = parse_expression();
+        switch (op.type()) {
+        case token_type::Assign:
+            return std::make_unique<ast::assign_stmt>(std::move(id_expr), std::move(expr));
+        case token_type::Minus_Assign:
+            return std::make_unique<ast::assign_stmt>(std::move(id_expr), std::move(expr),
+                                                      ast::operation::sub);
+        case token_type::Mult_Assign:
+            return std::make_unique<ast::assign_stmt>(std::move(id_expr), std::move(expr),
+                                                      ast::operation::mult);
+        case token_type::Plus_Assign:
+            return std::make_unique<ast::assign_stmt>(std::move(id_expr), std::move(expr),
+                                                      ast::operation::add);
+        default:
+            std::cerr << "Unsupported operation: " << op << '\n';
+            return nullptr;
+        }
+    } else {
+        std::cerr << "Unexpected token after identifier " << identifier << " : " << lex.peek()
+                  << '\n';
         return nullptr;
     }
 }
