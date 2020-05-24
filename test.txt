@@ -11,4 +11,14 @@ func fib(n : int32) : int64
         return fib(n - 1) + fib(n - 2)
     }
 
-func main { print("Hello World") ; print(fib(x)) }
+func factorial(n : int32) : int64 {
+    let x = 1;
+    while(n > 1){
+        x *= n, n -= 1
+    }
+    ret x
+}
+
+func main {
+  print("Hello World") ; print(fib(x)) , print(factorial(x))
+}
