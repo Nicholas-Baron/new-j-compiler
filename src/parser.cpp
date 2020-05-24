@@ -238,7 +238,9 @@ int op_precedence(const token & tok) {
     case token_type ::Plus:
         return 20;
     case token_type ::Lt:
+    case token_type::Gt:
     case token_type ::Le:
+    case token_type::Ge:
         return 15;
     case token_type ::Eq:
         return 12;
@@ -256,6 +258,8 @@ associativity op_associativity(const token & tok) {
     case token_type::LParen:
     case token_type ::Lt:
     case token_type ::Le:
+    case token_type ::Gt:
+    case token_type ::Ge:
     case token_type ::Boolean_Or:
     case token_type ::Boolean_And:
     case token_type ::Eq:
@@ -313,6 +317,8 @@ bool parser::match_secondary_expr() {
     case token_type ::LParen:
     case token_type ::Lt:
     case token_type ::Le:
+    case token_type ::Gt:
+    case token_type ::Ge:
     case token_type ::Plus:
     case token_type ::Minus:
     case token_type ::Boolean_Or:
@@ -339,6 +345,9 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
                                              parse_expression(precedence, associativity));
     case token_type ::Le:
         return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::le,
+                                             parse_expression(precedence, associativity));
+    case token_type::Gt:
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::gt,
                                              parse_expression(precedence, associativity));
     case token_type ::Eq:
         return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::eq,

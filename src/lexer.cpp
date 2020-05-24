@@ -201,6 +201,18 @@ token lexer::next() {
                 current_pos++;
                 return {input_text, start, 2, token_type ::Le};
             }
+        case '>':
+            if (current_pos >= input_text->size()
+                or (input_text->at(current_pos) != current_char
+                    and input_text->at(current_pos) != '=')) {
+                return {input_text, start, 1, token_type::Gt};
+            } else if (input_text->at(current_pos) == current_char) {
+                current_pos++;
+                return {input_text, start, 2, token_type::Shr};
+            } else {
+                current_pos++;
+                return {input_text, start, 2, token_type::Ge};
+            }
         case '+':
             if (current_pos >= input_text->size() or input_text->at(current_pos) != '=')
                 return {input_text, start, 1, token_type ::Plus};
