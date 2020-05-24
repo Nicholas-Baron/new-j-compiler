@@ -6,6 +6,7 @@
 #define TOKEN_H
 
 #include <memory>
+#include <ostream>
 #include <string>
 #include <variant>
 
@@ -84,7 +85,38 @@ class token final {
     token_type tok_type;
 
     friend std::ostream & operator<<(std::ostream & lhs, const token & rhs) {
-        return lhs << rhs.src_text->substr(rhs.pos, rhs.len);
+
+        size_t line_start = 1;
+        size_t col_start = 0;
+
+        size_t index = 0;
+        while (index < rhs.pos) {
+            if (rhs.src_text->at(index) == '\n') {
+                line_start++;
+                col_start = 0;
+            }
+            index++;
+            col_start++;
+        }
+
+        // now at the start of the token
+        auto line_end = line_start;
+        auto col_end = col_start;
+        while (index < rhs.pos + rhs.len) {
+            if (rhs.src_text->at(index) == '\n') {
+                line_end++;
+                col_end = 0;
+            }
+            index++;
+            col_end++;
+        }
+
+        lhs << '[';
+        if (line_start == line_end) lhs << line_start << ':' << col_start << '-' << col_end;
+        else
+            lhs << line_start << ':' << col_start << '-' << line_end << ':' << col_end;
+
+        return lhs << "] " << rhs.src_text->substr(rhs.pos, rhs.len);
     }
 };
 
