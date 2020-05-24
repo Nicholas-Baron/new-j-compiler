@@ -241,7 +241,7 @@ std::optional<ir::operand> ir_gen_visitor::fold_to_constant(ast::expression & ex
         break;
     case ast::node_type::binary_op:
         switch (auto & bin_op = dynamic_cast<ast::bin_op &>(expr); bin_op.oper()) {
-        case ast::bin_op::operation ::add: {
+        case ast::operation ::add: {
             auto lhs = fold_to_constant(bin_op.lhs_ref());
             if (not lhs) {
                 std::cerr << "Could not evaluate left hand side of " << bin_op.text() << '\n';
@@ -360,22 +360,22 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         // TODO: Modularize
 
         switch (bin.oper()) {
-        case ast::bin_op::operation::add:
+        case ast::operation::add:
             append_instruction(ir::operation ::add,
                                {temp_operand(lhs.type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
         default:
             std::cerr << "Unimplemented operation: " << expr.text() << '\n';
             break;
-        case ast::bin_op::operation::le:
+        case ast::operation::le:
             append_instruction(ir::operation ::le, {temp_operand(ir::ir_type ::boolean, false), lhs,
                                                     eval_ast(bin.rhs_ref())});
             break;
-        case ast::bin_op::operation::eq:
+        case ast::operation::eq:
             append_instruction(ir::operation ::eq, {temp_operand(ir::ir_type ::boolean, false), lhs,
                                                     eval_ast(bin.rhs_ref())});
             break;
-        case ast::bin_op::operation::boolean_or:
+        case ast::operation::boolean_or:
             if (lhs.type != ir::ir_type::boolean) return {false, ir::ir_type ::boolean, false};
             else {
                 auto false_block_name = block_name();
@@ -391,22 +391,22 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
                                    {temp_operand(ir::ir_type::boolean, false), lhs, rhs_val});
             }
             break;
-        case ast::bin_op::operation::sub:
+        case ast::operation::sub:
             append_instruction(ir::operation::sub,
                                {temp_operand(lhs.type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
             /*
-        case ast::bin_op::operation::mult:
+        case ast::operation::mult:
             break;
-        case ast::bin_op::operation::div:
+        case ast::operation::div:
             break;
-        case ast::bin_op::operation::boolean_and:
+        case ast::operation::boolean_and:
             break;
-        case ast::bin_op::operation::lt:
+        case ast::operation::lt:
             break;
-        case ast::bin_op::operation::gt:
+        case ast::operation::gt:
             break;
-        case ast::bin_op::operation::ge:
+        case ast::operation::ge:
             break;
              */
         }
@@ -493,7 +493,7 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
 
     case ast::node_type::binary_op:
         switch (auto & bin = dynamic_cast<const ast::bin_op &>(expr); bin.op) {
-        case ast::bin_op::operation::boolean_and: {
+        case ast::operation::boolean_and: {
             auto lhs = eval_ast(bin.lhs_ref());
             auto short_circuit = block_name();
 
@@ -504,7 +504,7 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
             auto rhs = eval_ast(bin.rhs_ref());
             append_instruction(ir::operation::branch, {rhs, true_operand, false_operand});
         } break;
-        case ast::bin_op::operation::boolean_or: {
+        case ast::operation::boolean_or: {
             auto lhs = eval_ast(bin.lhs_ref());
             auto short_circuit = block_name();
 
@@ -515,11 +515,11 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
             auto rhs = eval_ast(bin.rhs_ref());
             append_instruction(ir::operation::branch, {rhs, true_operand, false_operand});
         } break;
-        case ast::bin_op::operation::le:
-        case ast::bin_op::operation::lt:
-        case ast::bin_op::operation::gt:
-        case ast::bin_op::operation::ge:
-        case ast::bin_op::operation::eq:
+        case ast::operation::le:
+        case ast::operation::lt:
+        case ast::operation::gt:
+        case ast::operation::ge:
+        case ast::operation::eq:
             append_instruction(ir::operation::branch,
                                {eval_ast(expr), true_operand, false_operand});
             break;

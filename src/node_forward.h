@@ -22,6 +22,21 @@ enum struct node_type {
     while_loop,
 };
 
+enum class operation {
+    add,
+    assign,
+    boolean_and,
+    boolean_or,
+    div,
+    eq,
+    ge,
+    gt,
+    le,
+    lt,
+    mult,
+    sub,
+};
+
 // Not part of the AST, just a container for it
 class program;
 

@@ -338,22 +338,22 @@ std::unique_ptr<ast::expression> parser::parse_secondary_expr(std::unique_ptr<as
                                                               associativity associativity) {
     switch (auto op = consume(); op.type()) {
     case token_type ::Plus:
-        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::add,
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::operation::add,
                                              parse_expression(precedence, associativity));
     case token_type ::Minus:
-        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::sub,
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::operation::sub,
                                              parse_expression(precedence, associativity));
     case token_type ::Le:
-        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::le,
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::operation::le,
                                              parse_expression(precedence, associativity));
     case token_type::Gt:
-        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::gt,
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::operation::gt,
                                              parse_expression(precedence, associativity));
     case token_type ::Eq:
-        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::eq,
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::operation::eq,
                                              parse_expression(precedence, associativity));
     case token_type ::Boolean_Or:
-        return std::make_unique<ast::bin_op>(std::move(lhs), ast::bin_op::operation::boolean_or,
+        return std::make_unique<ast::bin_op>(std::move(lhs), ast::operation::boolean_or,
                                              parse_expression(precedence, associativity));
     case token_type ::LParen:
         return parse_call(std::move(lhs));

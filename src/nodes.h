@@ -261,7 +261,6 @@ struct literal_or_variable final : public ast::expression {
 };
 
 struct bin_op final : public ast::expression {
-    enum class operation { add, sub, mult, div, boolean_and, boolean_or, le, lt, gt, ge, eq };
 
     bin_op(std::unique_ptr<expression> lhs, operation op, std::unique_ptr<expression> rhs)
         : lhs{std::move(lhs)}, op{op}, rhs{std::move(rhs)} {}
