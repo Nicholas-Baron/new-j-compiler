@@ -21,6 +21,7 @@ std::optional<token_type> keyword(const std::string & identifier) {
         keywords.emplace("ret", token_type::Return);
         keywords.emplace("return", token_type::Return);
         keywords.emplace("or", token_type::Boolean_Or);
+        keywords.emplace("let", token_type::Let);
     }
 
     for (const auto & entry : keywords) {
@@ -38,7 +39,7 @@ token lexer::next() {
 
     // If we have previously peeked, just return the peeked item.
     if (peeked.has_value()) {
-        const auto to_ret = peeked.value();
+        auto to_ret = peeked.value();
         peeked.reset();
         return to_ret;
     }

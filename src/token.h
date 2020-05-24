@@ -31,6 +31,7 @@ enum struct token_type {
     LBrace,
     LParen,
     Le,
+    Let,
     Lt,
     Minus,
     Minus_Assign,
