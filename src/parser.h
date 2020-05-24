@@ -43,6 +43,7 @@ class parser final {
     std::unique_ptr<ast::func_call> parse_call(std::unique_ptr<ast::expression> tok);
     std::unique_ptr<ast::if_stmt> parse_if_stmt();
     std::unique_ptr<ast::ret_stmt> parse_return_stmt();
+    std::unique_ptr<ast::while_loop> parse_while_loop();
     std::unique_ptr<ast::var_decl> parse_let_decl();
 
     std::vector<std::unique_ptr<ast::expression>> parse_arguments();

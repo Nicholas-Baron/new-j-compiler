@@ -19,6 +19,7 @@ enum struct node_type {
     statement_block,
     value,
     var_decl,
+    while_loop,
 };
 
 // Not part of the AST, just a container for it
@@ -47,6 +48,7 @@ struct var_decl;
 struct if_stmt;
 struct ret_stmt;
 struct stmt_block;
+struct while_loop;
 
 // expressions
 struct bin_op;

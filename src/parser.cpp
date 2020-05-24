@@ -68,6 +68,8 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
         return parse_identifier_stmt();
     case token_type ::If:
         return parse_if_stmt();
+    case token_type::While:
+        return parse_while_loop();
     case token_type ::Const:
         return parse_const_decl(false);
     case token_type::Let:
@@ -393,4 +395,24 @@ ast::opt_typed parser::parse_opt_typed() {
         return ast::opt_typed{std::move(ident), consume()};
     }
     return ast::opt_typed{std::move(ident)};
+}
+std::unique_ptr<ast::while_loop> parser::parse_while_loop() {
+    if (consume().type() != token_type::While) {
+        std::cerr << "While loops need to start on 'while ('\n";
+        return nullptr;
+    }
+
+    if (consume().type() != token_type::LParen) {
+        std::cerr << "The condition of a while loop needs to be parenthesized\n";
+        return nullptr;
+    }
+
+    auto condition = parse_expression();
+
+    if (consume().type() != token_type::RParen) {
+        std::cerr << "The condition of a while loop needs to be parenthesized\n";
+        return nullptr;
+    }
+
+    return std::make_unique<ast::while_loop>(std::move(condition), parse_statement());
 }

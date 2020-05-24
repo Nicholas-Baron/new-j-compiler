@@ -45,6 +45,7 @@ enum struct token_type {
     Shl,
     StringLiteral,
     Struct,
+    While,
 };
 
 class token final {

@@ -163,6 +163,19 @@ struct if_stmt final : public ast::statement {
     std::unique_ptr<ast::statement> else_block;
 };
 
+struct while_loop final : public ast::statement {
+    while_loop(std::unique_ptr<ast::expression> cond, std::unique_ptr<ast::statement> stmt)
+        : condition{std::move(cond)}, body{std::move(stmt)} {}
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type::while_loop; }
+    [[nodiscard]] size_t start_pos() const noexcept final { return condition->start_pos(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return body->end_pos(); }
+    [[nodiscard]] token::source_t src() const noexcept final { return condition->src(); }
+
+    std::unique_ptr<ast::expression> condition;
+    std::unique_ptr<ast::statement> body;
+};
+
 struct ret_stmt final : public ast::statement {
     explicit ret_stmt(token && ret, std::unique_ptr<expression> value = nullptr)
         : ret{std::move(ret)}, value{std::move(value)} {}

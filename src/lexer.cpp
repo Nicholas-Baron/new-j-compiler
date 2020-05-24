@@ -22,6 +22,7 @@ std::optional<token_type> keyword(const std::string & identifier) {
         keywords.emplace("return", token_type::Return);
         keywords.emplace("or", token_type::Boolean_Or);
         keywords.emplace("let", token_type::Let);
+        keywords.emplace("while", token_type::While);
     }
 
     for (const auto & entry : keywords) {
