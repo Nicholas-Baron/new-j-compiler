@@ -70,6 +70,8 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
         return parse_if_stmt();
     case token_type ::Const:
         return parse_const_decl(false);
+    case token_type::Let:
+        return parse_let_decl();
     case token_type ::Return:
         return parse_return_stmt();
     default:
@@ -366,6 +368,24 @@ std::unique_ptr<ast::var_decl> parser::parse_const_decl(bool global) {
                                            global ? ast::var_decl::details::GlobalConst
                                                   : ast::var_decl::details::Const);
 }
+
+std::unique_ptr<ast::var_decl> parser::parse_let_decl() {
+    if (consume().type() != token_type::Let) {
+        std::cerr << "A let declaration can only start with let\n";
+        return nullptr;
+    }
+
+    auto ident = parse_opt_typed();
+
+    if (consume().type() != token_type::Assign) {
+        std::cerr << "Declarations must use '='\n";
+        return nullptr;
+    }
+
+    return std::make_unique<ast::var_decl>(std::move(ident), parse_expression(),
+                                           ast::var_decl::details::Let);
+}
+
 ast::opt_typed parser::parse_opt_typed() {
     auto ident = consume();
     if (lex.peek().type() == token_type::Colon) {
