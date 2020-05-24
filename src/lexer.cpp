@@ -223,6 +223,11 @@ token lexer::next() {
                 return {input_text, start, 1, token_type ::Minus};
             else
                 return {input_text, start, 2, token_type ::Minus_Assign};
+        case '*':
+            if (current_pos >= input_text->size() or input_text->at(current_pos) != '=')
+                return {input_text, start, 1, token_type::Mult};
+            else
+                return {input_text, start, 2, token_type::Mult_Assign};
         case '\n':
             return {input_text, start, 1, token_type ::Newline};
         case '(':
