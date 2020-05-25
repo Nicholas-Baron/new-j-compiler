@@ -131,9 +131,13 @@ void ir_gen_visitor::visit(const ast::node & node) {
                 return;
             }
 
-            append_instruction(ir::operation::assign,
-                               {{id, value.value().type, false}, value.value()});
-            locals.try_emplace(id, std::move(*value));
+            if (decl.detail == ast::var_decl::details::Const)
+                locals.try_emplace(id, std::move(*value));
+            else {
+                auto operand = ir::operand{id, value.value().type, false};
+                append_instruction(ir::operation::assign, {operand, value.value()});
+                locals.try_emplace(id, operand);
+            }
         }
 
     } break;
@@ -244,6 +248,41 @@ void ir_gen_visitor::visit(const ast::node & node) {
         visit(*loop.body);
         append_instruction(ir::operation::branch, {{cond_block->name, ir::ir_type::str, false}});
         append_block(std::move(loop_end));
+    } break;
+    case ast::node_type::assign_statement: {
+        auto & assign = dynamic_cast<const ast::assign_stmt &>(node);
+        auto lhs_op = eval_ast(*assign.dest);
+        if (lhs_op.is_immediate) {
+            std::cerr << "Cannot assign to " << lhs_op << '\n';
+            return;
+        }
+
+        auto rhs = eval_ast(*assign.value_src);
+
+        switch (std::vector operands{lhs_op, lhs_op, rhs}; assign.assign_op) {
+        case ast::operation::add:
+            append_instruction(ir::operation::add, std::move(operands));
+            break;
+        case ast::operation::assign:
+            if (not rhs.is_immediate)
+                // Rename operand to us
+                this->current_block()->contents.back().operands.front() = lhs_op;
+            else
+                append_instruction(ir::operation::assign, {lhs_op, rhs});
+            break;
+        case ast::operation::div:
+            append_instruction(ir::operation::div, std::move(operands));
+            break;
+        case ast::operation::mult:
+            append_instruction(ir::operation::mul, std::move(operands));
+            break;
+        case ast::operation::sub:
+            append_instruction(ir::operation::sub, std::move(operands));
+            break;
+        default:
+            std::cerr << "Unsupported op-assign " << assign.text() << '\n';
+        }
+
     } break;
     default:
         std::cerr << "Unimplemented ir gen for node " << node.text() << std::endl;

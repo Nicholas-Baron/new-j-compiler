@@ -1,6 +1,6 @@
 # Test program
 
-const x : int32 = 5 + 4
+const val : int32 = 5 + 4
 
 # This is a comment should not be tokenized.
 
@@ -20,5 +20,5 @@ func factorial(n : int32) : int64 {
 }
 
 func main {
-  print("Hello World") ; print(fib(x)) , print(factorial(x))
+  print("Hello World") ; print(fib(val)) , print(factorial(val))
 }
