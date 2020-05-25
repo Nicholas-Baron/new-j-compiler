@@ -60,7 +60,7 @@ std::unique_ptr<ast::function> parser::parse_function() {
 
 std::unique_ptr<ast::statement> parser::parse_statement() {
 
-    consume_newlines_and_semis();
+    consume_stmt_terminators();
     switch (lex.peek().type()) {
     case token_type ::LBrace:
         return parse_stmt_block();
@@ -84,13 +84,22 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
     }
 }
 
-void parser::consume_newlines_and_semis() {
-    while (lex.peek().type() == token_type::Newline or lex.peek().type() == token_type::Semi)
-        consume();
+void parser::consume_stmt_terminators() {
+
+    while (true) {
+        switch (lex.peek().type()) {
+        default:
+            return;
+        case token_type::Comma:
+        case token_type::Newline:
+        case token_type::Semi:
+            consume();
+        }
+    }
 }
 
 bool parser::done() {
-    consume_newlines_and_semis();
+    consume_stmt_terminators();
     return this->lex.peek().type() == token_type::EndOfFile;
 }
 
@@ -134,7 +143,7 @@ std::unique_ptr<ast::stmt_block> parser::parse_stmt_block() {
     ast::stmt_block block{consume()};
     while (lex.peek().type() != token_type::RBrace) {
         block.append(parse_statement());
-        consume_newlines_and_semis();
+        consume_stmt_terminators();
     }
 
     // Will be a RBrace
@@ -221,7 +230,7 @@ std::unique_ptr<ast::if_stmt> parser::parse_if_stmt() {
         and lex.peek().type() == token_type::Else) {
 
         consume();
-        consume_newlines_and_semis();
+        consume_stmt_terminators();
 
         switch (lex.peek().type()) {
         case token_type ::If:
@@ -351,6 +360,7 @@ bool parser::match_secondary_expr() {
     case token_type ::RParen:
     case token_type ::Newline:
     case token_type ::Semi:
+    case token_type::Comma:
         return false;
     }
 }

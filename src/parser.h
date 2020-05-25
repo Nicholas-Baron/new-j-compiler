@@ -21,7 +21,7 @@ class parser final {
   private:
     bool done();
     token consume();
-    void consume_newlines_and_semis();
+    void consume_stmt_terminators();
 
     bool match_expr();
     bool match_unary_expr();
