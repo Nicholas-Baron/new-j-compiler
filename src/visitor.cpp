@@ -20,9 +20,12 @@ void printing_visitor::visit(const ast::node & node) {
     switch (node.type()) {
     case ast::node_type::var_decl: {
         auto & decl = dynamic_cast<const ast::var_decl &>(node);
-        std::cout << "Const decl for " << decl.identifier() << '\n';
-        print_indent();
-        std::cout << "Is global: " << decl.in_global_scope() << '\n';
+        std::cout << (decl.detail == ast::var_decl::details::Let ? "Variable" : "Const")
+                  << " decl for " << decl.identifier() << '\n';
+        if (decl.detail != ast::var_decl::details::Let) {
+            print_indent();
+            std::cout << "Is global: " << decl.in_global_scope() << '\n';
+        }
         visit(decl.name);
         visit(*decl.val);
     } break;
