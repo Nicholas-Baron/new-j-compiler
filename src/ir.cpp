@@ -139,6 +139,10 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
         return lhs << rhs.operands.at(1) << " < " << rhs.operands.at(2);
     case operation::le:
         return lhs << rhs.operands.at(1) << " <= " << rhs.operands.at(2);
+    case operation::gt:
+        return lhs << rhs.operands.at(1) << " > " << rhs.operands.at(2);
+    case operation::ge:
+        return lhs << rhs.operands.at(1) << " >= " << rhs.operands.at(2);
     case operation::assign:
         return lhs << rhs.operands.at(1) << " = " << rhs.operands.at(2);
     case operation::halt:
@@ -180,7 +184,7 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
             lhs << *iter << ' ';
         break;
     default:
-        lhs << "Unimplemented operation";
+        lhs << "Unimplemented operation printer";
     }
 
     return lhs;
