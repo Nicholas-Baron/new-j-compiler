@@ -144,7 +144,7 @@ std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
     case operation::ge:
         return lhs << rhs.operands.at(1) << " >= " << rhs.operands.at(2);
     case operation::assign:
-        return lhs << rhs.operands.at(1) << " = " << rhs.operands.at(2);
+        return lhs << rhs.operands.back();
     case operation::halt:
         lhs << "halt ";
         if (not rhs.operands.empty()) lhs << rhs.operands.front();

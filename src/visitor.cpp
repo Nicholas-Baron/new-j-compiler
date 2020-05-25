@@ -131,6 +131,8 @@ void ir_gen_visitor::visit(const ast::node & node) {
                 return;
             }
 
+            append_instruction(ir::operation::assign,
+                               {{id, value.value().type, false}, value.value()});
             locals.try_emplace(id, std::move(*value));
         }
 
