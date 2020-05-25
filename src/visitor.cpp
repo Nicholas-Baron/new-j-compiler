@@ -82,6 +82,15 @@ void printing_visitor::visit(const ast::node & node) {
         visit(*loop.condition);
         visit(*loop.body);
     } break;
+    case ast::node_type::assign_statement: {
+        auto & assign_stmt = dynamic_cast<const ast::assign_stmt &>(node);
+        std::cout << "Assignment statement\n";
+        print_indent();
+        std::cout << "Is op-assign: " << std::boolalpha
+                  << (assign_stmt.assign_op != ast::operation::assign) << '\n';
+        visit(*assign_stmt.dest);
+        visit(*assign_stmt.value_src);
+    } break;
     default:
         std::cout << "Unimplemented visit on node " << node.text() << std::endl;
     }
