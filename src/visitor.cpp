@@ -76,6 +76,12 @@ void printing_visitor::visit(const ast::node & node) {
         if (auto & ret = dynamic_cast<const ast::ret_stmt &>(node); ret.value != nullptr)
             visit(*ret.value);
         break;
+    case ast::node_type::while_loop: {
+        auto & loop = dynamic_cast<const ast::while_loop &>(node);
+        std::cout << "While loop\n";
+        visit(*loop.condition);
+        visit(*loop.body);
+    } break;
     default:
         std::cout << "Unimplemented visit on node " << node.text() << std::endl;
     }
