@@ -228,6 +228,21 @@ void ir_gen_visitor::visit(const ast::node & node) {
         if (ret.value != nullptr) return_value.push_back(eval_ast(*ret.value));
         append_instruction(ir::operation ::ret, std::move(return_value));
     } break;
+    case ast::node_type::while_loop: {
+        auto & loop = dynamic_cast<const ast::while_loop &>(node);
+
+        auto * cond_block = append_block(block_name());
+
+        auto loop_block = block_name();
+        auto loop_end = block_name();
+
+        eval_if_condition(*loop.condition, loop_block, loop_end);
+
+        append_block(std::move(loop_block));
+        visit(*loop.body);
+        append_instruction(ir::operation::branch, {{cond_block->name, ir::ir_type::str, false}});
+        append_block(std::move(loop_end));
+    } break;
     default:
         std::cerr << "Unimplemented ir gen for node " << node.text() << std::endl;
         break;
@@ -384,6 +399,10 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
             break;
         default:
             std::cerr << "Unimplemented operation: " << expr.text() << '\n';
+            break;
+        case ast::operation::gt:
+            append_instruction(ir::operation::gt, {temp_operand(ir::ir_type::boolean, false), lhs,
+                                                   eval_ast(bin.rhs_ref())});
             break;
         case ast::operation::le:
             append_instruction(ir::operation ::le, {temp_operand(ir::ir_type ::boolean, false), lhs,
