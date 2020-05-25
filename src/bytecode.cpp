@@ -617,12 +617,50 @@ void program::make_instruction(const ir::three_address & instruction,
                     std::cerr << "Cannot generate jle for " << *cond_inst << std::endl;
                 }
                 break;
+            case ir::operation::gt:
+                // First, do the less than and then the equal
+                if (not lhs.is_immediate and not rhs.is_immediate) {
+                    auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+                    auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+                    append_instruction(opcode::slt, std::array<uint8_t, 3>{1, rhs_reg, lhs_reg});
+                    append_instruction(
+                        opcode::jne,
+                        make_reg_with_imm(1, 0, read_label(true_dest, false, text_end)));
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+                } else if (not rhs.is_immediate and lhs.is_immediate) {
+                    auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+                    // changes the less than or equal into just less than
+                    auto lhs_val = std::get<long>(lhs.data) + 1;
+
+                    append_instruction(opcode::slti, make_reg_with_imm(1, rhs_reg, lhs_val));
+
+                    append_instruction(
+                        opcode::jne,
+                        make_reg_with_imm(1, 0, read_label(true_dest, false, text_end)));
+
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+                } else if (rhs.is_immediate and not lhs.is_immediate) {
+                    uint8_t rhs_reg = 1;
+                    {
+                        auto [first, second] = load_64_bits(rhs_reg, std::get<long>(rhs.data));
+                        if (first.has_value()) append_instruction(std::move(*first));
+                        append_instruction(std::move(second));
+                    }
+
+                    auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+                    append_instruction(opcode::slt, std::array{rhs_reg, rhs_reg, lhs_reg});
+                    append_instruction(
+                        opcode::jne,
+                        make_reg_with_imm(rhs_reg, 0, read_label(true_dest, false, text_end)));
+                    append_instruction(opcode::jmp, read_label(false_dest, true, text_end));
+                } else {
+                    std::cerr << "Cannot generate jgt for " << *cond_inst << std::endl;
+                }
+                break;
                 /*
             case ir::operation::ne:
                 break;
             case ir::operation::ge:
-                break;
-            case ir::operation::gt:
                 break;
             case ir::operation::lt:
                 break;
@@ -635,6 +673,7 @@ void program::make_instruction(const ir::three_address & instruction,
         break;
     case ir::operation::le:
     case ir::operation::eq:
+    case ir::operation::gt:
         break;
     default:
         std::cerr << "Instruction " << instruction << " cannot be translated to bytecode.\n";
