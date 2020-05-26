@@ -332,10 +332,8 @@ void program::make_instruction(const ir::three_address & instruction,
     } break;
 
     case ir::operation::halt:
-        append_instruction(
-            opcode::syscall,
-            make_reg_with_imm(get_register_info(std::get<std::string>(res.value().data)).reg_num, 0,
-                              5));
+        // TODO: Use the actual value in the register if it exists
+        append_instruction(opcode::syscall, make_reg_with_imm(0, 0, 5));
         break;
 
     case ir::operation::ret:
@@ -853,13 +851,12 @@ void program::print_file(const std::string & filename) const {
                                 content.end());
         if (iter == file_contents.end()) return file_contents.size();
         else
-            return iter - file_contents.begin();
+            return (iter - file_contents.begin()) + content.size();
     };
 
     {
         auto data_offset = find_in_file({'.', 'd', 'a', 't', 'a', 0});
         if (data_offset != file_contents.size() and not data.empty()) {
-            data_offset += 6;
             auto data_pos = file_contents.size();
             for (auto i = 0u; i < 4; i++)
                 file_contents.at(data_offset + i) = (data_pos >> i * 8u) & 0xFFu;
@@ -871,7 +868,6 @@ void program::print_file(const std::string & filename) const {
     {
         auto text_offset = find_in_file({'.', 't', 'e', 'x', 't', 0});
         if (text_offset != file_contents.size() and not bytecode.empty()) {
-            text_offset += 6;
             auto text_pos = file_contents.size();
             for (auto i = 0u; i < 4; i++)
                 file_contents.at(text_offset + i) = (text_pos >> i * 8u) & 0xFFu;
@@ -895,13 +891,13 @@ std::vector<uint8_t> program::generate_header_table() const {
     if (not this->data.empty()) {
         // name of entry
         for (auto c : ".data") header_table.push_back(c);
-        header_table.push_back('\0');
         // byte offset
-        for (auto i = 0; i < 4; i++) header_table.push_back(0);
+        for (auto i = 0u; i < sizeof(uint32_t); i++) header_table.push_back(0);
         // length of section
         auto data_length = data.size();
         if (data_length > UINT32_MAX) std::cerr << "Data section too long\n";
-        for (auto i = 0u; i < 4; i++) header_table.push_back((data_length >> i * 8u) & 0xFFu);
+        for (auto i = 0u; i < sizeof(uint32_t); i++)
+            header_table.push_back((data_length >> i * 8u) & 0xFFu);
         // null byte
         header_table.push_back('\0');
     }
@@ -910,12 +906,12 @@ std::vector<uint8_t> program::generate_header_table() const {
 
     // text entry in header table
     for (auto c : ".text") header_table.push_back(c);
-    header_table.push_back('\0');
     // offset to text
     for (auto i = 0; i < 4; i++) header_table.push_back(0);
     // length of text
     {
-        const auto text_length = bytecode.size() * 8;
+        static_assert(sizeof(uint64_t) == 8);
+        const auto text_length = bytecode.size() * sizeof(uint64_t);
         if (text_length > UINT32_MAX) std::cerr << "Text section too long\n";
         for (auto i = 0u; i < 4; i++) header_table.push_back((text_length >> i * 8u) & 0xFFu);
     }
