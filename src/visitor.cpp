@@ -150,7 +150,13 @@ void ir_gen_visitor::visit(const ast::node & node) {
         visit(func.name);
         for (const auto & param : func.params) visit(param);
         visit(*func.body);
-        if (not func_ir->body.back()->terminated()) append_instruction(ir::operation ::ret);
+        if (not func_ir->body.back()->terminated()) {
+            if (func_ir->name == "main")
+                // TODO: Return the actual value from main
+                append_instruction(ir::operation::halt, {{0, ir::ir_type::i32, true}});
+            else
+                append_instruction(ir::operation ::ret);
+        }
         this->active_variables.pop_back();
         this->current_func = nullptr;
     } break;
