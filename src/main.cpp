@@ -14,12 +14,17 @@ int main(const int arg_count, const char ** args) {
     if (user_args->print_help) {
         std::cout << args[0] << '\n'
                   << "A compiler for the New-J language\n"
-                     "Options: [-h|--help] <input filename>\n"
-                     "\t-h or --help -> print this help message\n"
+                     "Options: [-h|--help|-v|--version] <input filename>\n"
+                     "\t-h or --help -> print this help message and exit\n"
+                     "\t-v or --version -> print version number and exit\n"
                      "\tinput filename -> the input source code to compile"
                   << std::endl;
         return 0;
+    } else if (user_args->print_version) {
+        std::cout << args[0] << '\n' << "Version 0.1" << std::endl;
+        return 0;
     }
+
     std::cout << "File to read: " << user_args->input_filename << std::endl;
 
     parser p{lexer{user_args->input_filename}};

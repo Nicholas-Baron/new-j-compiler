@@ -8,6 +8,7 @@
 struct user_settings {
     std::string input_filename{};
     bool print_help{false};
+    bool print_version{false};
     bool print_syntax{false};
     bool print_ir{false};
     bool print_bytecode{false};
