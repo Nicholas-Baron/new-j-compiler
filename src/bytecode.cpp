@@ -277,6 +277,23 @@ void program::make_instruction(const ir::three_address & instruction,
             append_instruction(opcode::sub, std::array{result_reg, lhs_reg, rhs_reg});
         }
     } break;
+    case ir::operation::mul: {
+        auto lhs = instruction.operands.at(1);
+        auto rhs = instruction.operands.at(2);
+        auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
+        if (lhs.is_immediate and rhs.is_immediate) {
+            auto result = std::get<long>(lhs.data) * std::get<long>(rhs.data);
+            auto [first, second] = load_64_bits(result_reg, result);
+            if (first.has_value()) append_instruction(std::move(*first));
+            append_instruction(std::move(second));
+        } else if (not lhs.is_immediate and not rhs.is_immediate) {
+            auto lhs_reg = get_register_info(std::get<std::string>(lhs.data)).reg_num;
+            auto rhs_reg = get_register_info(std::get<std::string>(rhs.data)).reg_num;
+            append_instruction(opcode::mul, std::array{result_reg, lhs_reg, rhs_reg});
+        } else {
+            std::cerr << "Mul instruction in " << instruction << " cannot be translated.\n";
+        }
+    } break;
     case ir::operation::assign: {
         auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
         auto src = instruction.operands.back();
