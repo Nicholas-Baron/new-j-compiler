@@ -16,15 +16,4 @@ endif ()
 
 project(new_j_compiler CXX)
 
-add_executable(new_jc
-        src/main.cpp
-        src/config.cpp
-        src/lexer.cpp
-        src/parser.cpp
-        src/program.cpp
-        src/visitor.cpp
-        src/ir.cpp
-        src/bytecode.cpp
-        )
-
-set_property(TARGET new_jc PROPERTY CXX_STANDARD 17)
+add_subdirectory(src)
