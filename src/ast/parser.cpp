@@ -5,6 +5,7 @@
 #include "parser.h"
 
 #include "nodes.h"
+#include "program.h"
 
 #include <iostream>
 

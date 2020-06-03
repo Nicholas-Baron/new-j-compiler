@@ -2,6 +2,8 @@
 // Created by nick on 4/10/20.
 //
 
+#include "program.h"
+
 #include "nodes.h"
 
 #include <algorithm>

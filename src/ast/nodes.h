@@ -15,19 +15,6 @@
 
 namespace ast {
 
-class program final {
-  public:
-    bool add_item(std::unique_ptr<top_level> item);
-    [[nodiscard]] top_level * find(const std::string & id) const;
-
-    void visit(const std::function<void(top_level &)> & visitor) {
-        for (auto & item : items) visitor(*item);
-    }
-
-  private:
-    std::vector<std::unique_ptr<top_level>> items{};
-};
-
 struct node {
   public:
     constexpr node() noexcept = default;

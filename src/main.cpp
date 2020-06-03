@@ -2,6 +2,7 @@
 #include "ast/lexer.h"
 #include "ast/nodes.h"
 #include "ast/parser.h"
+#include "ast/program.h"
 #include "bytecode.h"
 #include "config.h"
 #include "visitor.h"
