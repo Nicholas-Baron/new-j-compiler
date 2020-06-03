@@ -4,7 +4,7 @@
 
 #include "visitor.h"
 
-#include "nodes.h"
+#include "ast/nodes.h"
 
 #include <iostream>
 

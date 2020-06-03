@@ -1,9 +1,9 @@
 
+#include "ast/lexer.h"
+#include "ast/nodes.h"
+#include "ast/parser.h"
 #include "bytecode.h"
 #include "config.h"
-#include "lexer.h"
-#include "nodes.h"
-#include "parser.h"
 #include "visitor.h"
 
 #include <iostream>

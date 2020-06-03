@@ -5,9 +5,9 @@
 #ifndef NEW_J_COMPILER_VISITOR_H
 #define NEW_J_COMPILER_VISITOR_H
 
+#include "ast/node_forward.h"
+#include "ast/token.h"
 #include "ir.h"
-#include "node_forward.h"
-#include "token.h"
 
 #include <map>
 
