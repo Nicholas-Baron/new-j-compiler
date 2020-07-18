@@ -79,6 +79,25 @@ class opt_typed final : public ast::node {
 
 // Top level items
 
+struct struct_decl final : public ast::top_level {
+
+    struct_decl(token && name, std::vector<std::pair<token, token>> && fields)
+        : name{std::move(name)}, fields{std::move(fields)} {}
+
+    [[nodiscard]] ast::node_type type() const noexcept final { return node_type::struct_decl; }
+
+    [[nodiscard]] size_t start_pos() const noexcept final { return name.start(); }
+    [[nodiscard]] size_t end_pos() const noexcept final { return fields.back().second.end(); }
+
+    [[nodiscard]] token::source_t src() const noexcept final { return name.src(); }
+    [[nodiscard]] std::string identifier() const final {
+        return std::get<std::string>(name.get_data());
+    }
+
+    token name;
+    std::vector<std::pair<token, token>> fields;
+};
+
 struct parameter final : public ast::node {
     parameter(token && name, token && type) : name{std::move(name)}, val_type{std::move(type)} {}
 

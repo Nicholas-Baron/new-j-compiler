@@ -30,7 +30,7 @@ std::unique_ptr<ast::top_level> parser::parse_top_level() {
     case token_type ::Const:
         return this->parse_const_decl(true);
     case token_type ::Struct:
-        // return this->parse_struct_decl();
+        return this->parse_struct_decl();
     default:
         std::cerr << "Token " << lex.peek() << " cannot start a top level item\n";
         return nullptr;
@@ -85,16 +85,18 @@ std::unique_ptr<ast::statement> parser::parse_statement() {
     }
 }
 
-void parser::consume_stmt_terminators() {
+bool parser::consume_stmt_terminators() {
 
+    bool found_terminators = false;
     while (true) {
         switch (lex.peek().type()) {
         default:
-            return;
+            return found_terminators;
         case token_type::Comma:
         case token_type::Newline:
         case token_type::Semi:
             consume();
+            found_terminators = true;
         }
     }
 }
@@ -456,4 +458,48 @@ std::unique_ptr<ast::while_loop> parser::parse_while_loop() {
     }
 
     return std::make_unique<ast::while_loop>(std::move(condition), parse_statement());
+}
+std::unique_ptr<ast::top_level> parser::parse_struct_decl() {
+    // Definitely the 'struct' keyword
+    consume();
+
+    auto struct_type_name = consume();
+
+    if (consume().type() != token_type::LBrace) {
+        std::cerr << "Struct declarations need '{'\n";
+        return nullptr;
+    }
+
+    std::vector<std::pair<token, token>> fields;
+    while (true) {
+        auto field_name = consume();
+        if (field_name.type() != token_type::Identifier or consume().type() != token_type::Colon) {
+            std::cerr << "Struct fields need to be named and have an explicit type\n";
+            return nullptr;
+        }
+
+        auto field_type = consume();
+
+        fields.emplace_back(field_name, field_type);
+
+        if (not consume_stmt_terminators()) {
+            // Either end of struct or error
+            if (lex.peek().type() == token_type::RBrace) break;
+            else {
+                std::cerr << "Unexpected " << lex.peek() << " in struct declaration\n";
+                return nullptr;
+            }
+        } else {
+            // Either next fields or error
+            if (lex.peek().type() == token_type::RBrace) {
+                std::cerr << "Trailing separators found. Currently unsupported\n";
+                return nullptr;
+            }
+        }
+    }
+
+    // Should be right brace
+    consume();
+
+    return std::make_unique<ast::struct_decl>(std::move(struct_type_name), std::move(fields));
 }

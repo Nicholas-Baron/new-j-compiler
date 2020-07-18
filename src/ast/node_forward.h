@@ -21,6 +21,7 @@ enum struct node_type {
     value,
     var_decl,
     while_loop,
+    struct_decl,
 };
 
 enum class operation {
@@ -59,6 +60,7 @@ struct func_call;
 
 // declarations
 struct var_decl;
+struct struct_decl;
 
 // Statements
 struct if_stmt;

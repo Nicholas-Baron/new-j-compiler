@@ -21,7 +21,7 @@ class parser final {
   private:
     bool done();
     token consume();
-    void consume_stmt_terminators();
+    bool consume_stmt_terminators();
 
     bool match_expr();
     bool match_unary_expr();
@@ -58,6 +58,7 @@ class parser final {
                          associativity associativity);
 
     lexer lex;
+    std::unique_ptr<ast::top_level> parse_struct_decl();
 };
 
 #endif // NEW_J_COMPILER_PARSER_H
