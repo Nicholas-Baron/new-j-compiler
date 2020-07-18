@@ -5,6 +5,8 @@
 #ifndef NEW_J_COMPILER_IR_H
 #define NEW_J_COMPILER_IR_H
 
+#include "ir_type.h"
+
 #include <functional>
 #include <iosfwd>
 #include <memory>
@@ -40,8 +42,6 @@ enum struct operation {
     store,
     sub,
 };
-
-enum struct ir_type { unit, boolean, str, i32, i64, f32, f64, func };
 
 struct operand {
     std::variant<std::monostate, bool, long, double, std::string> data;
