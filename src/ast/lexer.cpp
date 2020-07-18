@@ -6,9 +6,11 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <sstream>
 
+namespace {
 std::optional<token_type> keyword(const std::string & identifier) {
     static std::map<std::string, token_type> keywords;
     if (keywords.empty()) {
@@ -35,6 +37,28 @@ std::optional<token_type> keyword(const std::string & identifier) {
 
     return {};
 }
+
+std::optional<token_type> punctuation(char symbol) {
+    static std::map<char, token_type> symbols;
+    if (symbols.empty()) {
+        symbols.emplace(';', token_type::Semi);
+        symbols.emplace(',', token_type::Comma);
+        symbols.emplace(':', token_type::Colon);
+        symbols.emplace('(', token_type::LParen);
+        symbols.emplace(')', token_type::RParen);
+        symbols.emplace('\n', token_type::Newline);
+        symbols.emplace('{', token_type::LBrace);
+        symbols.emplace('}', token_type::RBrace);
+    }
+
+    if (auto iter = symbols.find(symbol); iter != symbols.end()) {
+        return iter->second;
+    } else {
+        return {};
+    }
+}
+
+} // namespace
 
 token lexer::next() {
 
@@ -88,8 +112,7 @@ token lexer::next() {
             return start != current_pos;
         };
 
-        while (consume_whitespace() or consume_comment())
-            ;
+        while (consume_whitespace() or consume_comment()) {}
     }
 
     if (current_pos >= input_text->size())
@@ -170,11 +193,12 @@ token lexer::next() {
         }
         return {input_text, start, current_pos - start, token_type ::StringLiteral};
     } else {
+
+        auto possible_token_type = punctuation(current_char);
+        if (possible_token_type.has_value())
+            return {input_text, start, 1, possible_token_type.value()};
+
         switch (current_char) {
-        case ';':
-            return {input_text, start, 1, token_type ::Semi};
-        case ':':
-            return {input_text, start, 1, token_type ::Colon};
         case '=':
             if (current_pos >= input_text->size() or input_text->at(current_pos) != current_char)
                 return {input_text, start, 1, token_type ::Assign};
@@ -234,19 +258,8 @@ token lexer::next() {
                 current_pos++;
                 return {input_text, start, 2, token_type::Mult_Assign};
             }
-        case '\n':
-            return {input_text, start, 1, token_type ::Newline};
-        case '(':
-            return {input_text, start, 1, token_type ::LParen};
-        case ')':
-            return {input_text, start, 1, token_type ::RParen};
-        case '{':
-            return {input_text, start, 1, token_type ::LBrace};
-        case '}':
-            return {input_text, start, 1, token_type ::RBrace};
-        case ',':
-            return {input_text, start, 1, token_type ::Comma};
         default:
+            std::cerr << "Unrecognized symbol: " << current_char << '\n';
             return {input_text, start, 1, token_type ::EndOfFile};
         }
     }
