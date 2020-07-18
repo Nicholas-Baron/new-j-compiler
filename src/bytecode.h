@@ -5,7 +5,7 @@
 #ifndef NEW_J_COMPILER_BYTECODE_H
 #define NEW_J_COMPILER_BYTECODE_H
 
-#include "ir.h"
+#include "ir/ir.h"
 
 #include <map>
 #include <optional>

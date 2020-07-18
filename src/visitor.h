@@ -7,7 +7,7 @@
 
 #include "ast/node_forward.h"
 #include "ast/token.h"
-#include "ir.h"
+#include "ir/ir.h"
 
 #include <map>
 

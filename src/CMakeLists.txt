@@ -6,7 +6,7 @@ add_executable(new_jc
         ast/parser.cpp
         ast/program.cpp
         visitor.cpp
-        ir.cpp
+        ir/ir.cpp
         bytecode.cpp
         )
 
