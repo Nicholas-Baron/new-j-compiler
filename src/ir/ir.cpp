@@ -43,9 +43,10 @@ function * program::lookup_function(const std::string & name) const noexcept {
         ->get();
 }
 
-function * program::register_function(const std::string & name, ir::function_type && func_type) {
+function * program::register_function(const std::string & name,
+                                      std::shared_ptr<ir::function_type> func_type) {
 
-    if (this->function_exists(name, func_type)) return lookup_function(name, func_type);
+    if (this->function_exists(name, *func_type)) return lookup_function(name, *func_type);
 
     prog.push_back(std::make_unique<ir::function>(name, std::move(func_type)));
     return prog.back().get();
@@ -64,7 +65,7 @@ bool program::function_exists(const std::string & name,
                               const ir::function_type & func_type) const noexcept {
     return std::find_if(this->prog.begin(), this->prog.end(),
                         [&](const auto & func) -> bool {
-                            return func->name == name and func->type == func_type;
+                            return func->name == name and *func->type == func_type;
                         })
            != this->prog.end();
 }
@@ -75,7 +76,7 @@ function * program::lookup_function(const std::string & name,
 
     return std::find_if(this->prog.begin(), this->prog.end(),
                         [&](const auto & func) -> bool {
-                            return func->name == name and func->type == func_type;
+                            return func->name == name and *func->type == func_type;
                         })
         ->get();
 }
@@ -83,7 +84,9 @@ std::shared_ptr<ir::type> program::lookup_type(const std::string & name) {
     auto iter = this->types.find(name);
     if (iter != types.end()) { return iter->second; }
 
-    std::cerr << "Failed to lookup type " << name << "\n";
+    if (function_exists(name)) return this->lookup_function(name)->type;
+
+    std::cerr << "Failed to lookup type " << name << std::endl;
     return nullptr;
 }
 
@@ -101,6 +104,8 @@ bool basic_block::terminated() {
 }
 
 std::ostream & operator<<(std::ostream & lhs, const operand & rhs) {
+    if (rhs.type == nullptr) { return lhs << "(null type)" << std::flush; }
+
     lhs << '(';
     switch (static_cast<ir_type>(*rhs.type)) {
     case ir_type::unit:
@@ -144,7 +149,7 @@ std::ostream & operator<<(std::ostream & lhs, const operand & rhs) {
         lhs << "unknown type";
         break;
     }
-    return lhs << ')';
+    return lhs << ')' << std::flush;
 }
 
 std::ostream & operator<<(std::ostream & lhs, const three_address & rhs) {
@@ -331,11 +336,11 @@ three_address * function::instruction_number(size_t pos) const {
 }
 std::vector<ir::operand> function::parameters() const {
     std::vector<ir::operand> to_ret;
-    to_ret.reserve(type.parameters.size());
+    to_ret.reserve(type->parameters.size());
 
-    for (size_t i = 0; i < type.parameters.size(); i++) {
+    for (size_t i = 0; i < type->parameters.size(); i++) {
         auto param_name = param_names.at(i);
-        auto param_type = this->type.parameters.at(i);
+        auto param_type = this->type->parameters.at(i);
         to_ret.push_back({param_name, param_type, false});
     }
 

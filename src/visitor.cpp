@@ -147,7 +147,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
     case ast::node_type::opt_typed: {
         auto & name = dynamic_cast<const ast::opt_typed &>(node);
         if (current_func != nullptr and name.name() == current_func->name
-            and *current_func->type.return_type == ir::ir_type::unit and name.user_explicit()) {
+            and *current_func->type->return_type == ir::ir_type::unit and name.user_explicit()) {
             std::cerr << "Deprecated path for assigning return type of function\n";
         } else if (name.user_explicit())
             std::cerr << "Unknown action to preform on " << name.text() << '\n';
@@ -361,7 +361,8 @@ void ir_gen_visitor::dump() const {
             std::cout << func->name << ' ';
             {
                 bool first = true;
-                for (const auto & param : func->parameters()) {
+                auto param_list = func->parameters();
+                for (const auto & param : param_list) {
                     if (not first) std::cout << ", ";
                     else
                         first = false;
@@ -369,10 +370,10 @@ void ir_gen_visitor::dump() const {
                     std::cout << param;
                 }
             }
-            std::cout << " {\n";
+            std::cout << " {" << std::endl;
             for (const auto & block : func->body) {
                 std::cout << block->name << ":\n";
-                for (const auto & inst : block->contents) std::cout << '\t' << inst << '\n';
+                for (const auto & inst : block->contents) std::cout << '\t' << inst << std::endl;
             }
             std::cout << "}\n" << std::endl;
         }
@@ -382,13 +383,15 @@ std::string ir_gen_visitor::temp_name() { return "temp_" + std::to_string(this->
 std::shared_ptr<ir::type> ir_gen_visitor::type_from(const token & tok) {
     switch (tok.type()) {
     case token_type::Identifier: {
-        auto user_specified = prog.lookup_type(std::get<std::string>(tok.get_data()));
-        if (user_specified != nullptr) return user_specified;
+        auto ident = std::get<std::string>(tok.get_data());
+        std::cerr << "Looking up type of " << ident << std::endl;
+        if (auto user_specified = prog.lookup_type(ident); user_specified != nullptr)
+            return user_specified;
         else {
             std::cerr << "Could find type named " << tok << '\n';
             return nullptr;
         }
-    } break;
+    }
     case token_type::Int32:
         return prog.lookup_type("int32");
     case token_type::Int64:
@@ -412,7 +415,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
 
     if (builtins.empty()) {
 
-        ir::function_type print_type{{prog.lookup_type("i32")}, prog.lookup_type("unit")};
+        ir::function_type print_type{{prog.lookup_type("int32")}, prog.lookup_type("unit")};
 
         builtins.emplace(
             "print",
@@ -486,13 +489,13 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
     case ast::node_type::func_call: {
         if (current_block() == nullptr) {
             std::cerr << "Found func_call not in a block: " << expr.text() << '\n';
-            return {0l, prog.lookup_type("i32"), true};
+            return {0l, prog.lookup_type("int32"), true};
         }
         auto & call = dynamic_cast<const ast::func_call &>(expr);
 
         if (call.name() == nullptr) {
             std::cerr << "Name expression of a function call was null\n";
-            return {0l, prog.lookup_type("i32"), true};
+            return {0l, prog.lookup_type("int32"), true};
         }
 
         std::optional<ir::operand> func_name;
@@ -507,7 +510,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
 
         if (not func_name) {
             std::cerr << "Could not get name of function call for " << call.text() << '\n';
-            return {0l, prog.lookup_type("i32"), true};
+            return {0l, prog.lookup_type("int32"), true};
         }
 
         auto lookup_name = std::get<std::string>(func_name.value().data);
@@ -516,12 +519,12 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         if (not prog.function_exists(lookup_name, call.arguments.size())) {
             std::cerr << "Function " << std::get<std::string>(func_name.value().data)
                       << " is not defined\n";
-            return {0l, prog.lookup_type("i32"), true};
+            return {0l, prog.lookup_type("int32"), true};
         }
 
         auto * callee = prog.lookup_function(lookup_name, call.arguments.size());
 
-        std::vector operands{temp_operand(callee->type.return_type, false), func_name.value()};
+        std::vector operands{temp_operand(callee->type->return_type, false), func_name.value()};
         for (auto & arg : call.arguments) { operands.push_back(eval_ast(*arg)); }
 
         this->append_instruction(ir::operation ::call, std::move(operands));
@@ -530,7 +533,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         auto & value = dynamic_cast<const ast::literal_or_variable &>(expr);
         switch (value.val.type()) {
         case token_type ::Int:
-            return {std::get<long>(value.data()), prog.lookup_type("i32"), true};
+            return {std::get<long>(value.data()), prog.lookup_type("int32"), true};
         case token_type ::Identifier: {
             auto name = std::get<std::string>(value.data());
             if (auto oper = read_variable(name); oper) return oper.value();
@@ -547,7 +550,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
     } break;
     default:
         std::cerr << expr.text() << " cannot be evaluated." << std::endl;
-        return {0l, prog.lookup_type("i32"), true};
+        return {0l, prog.lookup_type("int32"), true};
     }
     return current_block()->contents.back().result().value();
 }
@@ -625,10 +628,10 @@ void ir_gen_visitor::generate_function(const ast::function & func) {
 
     auto return_type = prog.lookup_type("unit");
 
-    if (auto func_type = func.name.type_data(); func.name.user_explicit()) {
-        return_type = type_from(func_type);
+    if (func.name.user_explicit()) {
+        return_type = type_from(func.name.type_data());
         if (return_type == nullptr) {
-            std::cerr << "Cannot use " << func_type << " as a return type.\n";
+            std::cerr << "Cannot use " << func.name.type_data() << " as a return type.\n";
         }
     }
 
@@ -640,7 +643,7 @@ void ir_gen_visitor::generate_function(const ast::function & func) {
             std::cerr << "Could not find type " << param.val_type << '\n';
     }
 
-    ir::function_type func_type{std::move(param_types), return_type};
+    auto func_type = std::make_shared<ir::function_type>(std::move(param_types), return_type);
 
     ir::function * func_ir = this->prog.register_function(func.identifier(), std::move(func_type));
     this->current_func = func_ir;
@@ -662,7 +665,7 @@ void ir_gen_visitor::generate_function(const ast::function & func) {
     if (not func_ir->body.back()->terminated()) {
         if (func_ir->name == "main")
             // TODO: Return the actual value from main
-            append_instruction(ir::operation::halt, {{0, prog.lookup_type("i32"), true}});
+            append_instruction(ir::operation::halt, {{0, prog.lookup_type("int32"), true}});
         else
             append_instruction(ir::operation ::ret);
     }

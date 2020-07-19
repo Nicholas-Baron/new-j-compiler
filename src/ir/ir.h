@@ -72,7 +72,7 @@ struct basic_block {
 };
 
 struct function {
-    explicit function(std::string name, ir::function_type && type)
+    explicit function(std::string name, std::shared_ptr<ir::function_type> type)
         : name{std::move(name)}, type{std::move(type)} {}
 
     [[nodiscard]] three_address * instruction_number(size_t) const;
@@ -82,7 +82,7 @@ struct function {
     std::string name;
     std::vector<std::unique_ptr<basic_block>> body{};
     std::vector<std::string> param_names;
-    ir::function_type type;
+    std::shared_ptr<ir::function_type> type;
 };
 
 class program {
@@ -109,8 +109,10 @@ class program {
                                              const ir::function_type & func_type) const noexcept;
 
     [[nodiscard]] function * register_function(const std::string & name,
-                                               ir::function_type && func_type);
+                                               std::shared_ptr<ir::function_type> func_type);
 
+    // This function first looks up the type where the name is equal to the given name.
+    // Next, if the first lookup failed, it finds the type of the function with the given name.
     [[nodiscard]] std::shared_ptr<ir::type> lookup_type(const std::string & name);
 
     void for_each_func(const std::function<void(ir::function *)> & visitor) const {
