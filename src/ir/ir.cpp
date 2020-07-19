@@ -10,6 +10,16 @@
 
 namespace ir {
 
+program::program() {
+    types.emplace("int32", std::make_shared<ir::i32_type>());
+    types.emplace("int64", std::make_shared<ir::i64_type>());
+    types.emplace("float32", std::make_shared<ir::f32_type>());
+    types.emplace("float64", std::make_shared<ir::f64_type>());
+    types.emplace("boolean", std::make_shared<ir::boolean_type>());
+    types.emplace("string", std::make_shared<ir::string_type>());
+    types.emplace("unit", std::make_shared<ir::unit_type>());
+}
+
 bool program::function_exists(const std::string & name) const noexcept {
     return std::find_if(prog.begin(), prog.end(),
                         [&name](const auto & func) -> bool { return func->name == name; })
@@ -20,7 +30,7 @@ bool program::function_exists(const std::string & name, size_t param_count) cons
 
     return std::find_if(this->prog.begin(), this->prog.end(),
                         [&](const auto & func) -> bool {
-                            return func->name == name and func->parameters.size() == param_count;
+                            return func->name == name and func->parameters().size() == param_count;
                         })
            != this->prog.end();
 }
@@ -33,11 +43,11 @@ function * program::lookup_function(const std::string & name) const noexcept {
         ->get();
 }
 
-function * program::register_function(const std::string & name, size_t param_count) {
+function * program::register_function(const std::string & name, ir::function_type && func_type) {
 
-    if (this->function_exists(name, param_count)) return lookup_function(name, param_count);
+    if (this->function_exists(name, func_type)) return lookup_function(name, func_type);
 
-    prog.push_back(std::make_unique<ir::function>(name));
+    prog.push_back(std::make_unique<ir::function>(name, std::move(func_type)));
     return prog.back().get();
 }
 function * program::lookup_function(const std::string & name, size_t param_count) const noexcept {
@@ -45,10 +55,38 @@ function * program::lookup_function(const std::string & name, size_t param_count
 
     return std::find_if(this->prog.begin(), this->prog.end(),
                         [&](const auto & func) -> bool {
-                            return func->name == name and func->parameters.size() == param_count;
+                            return func->name == name and func->parameters().size() == param_count;
                         })
         ->get();
 }
+
+bool program::function_exists(const std::string & name,
+                              const ir::function_type & func_type) const noexcept {
+    return std::find_if(this->prog.begin(), this->prog.end(),
+                        [&](const auto & func) -> bool {
+                            return func->name == name and func->type == func_type;
+                        })
+           != this->prog.end();
+}
+
+function * program::lookup_function(const std::string & name,
+                                    const ir::function_type & func_type) const noexcept {
+    if (not this->function_exists(name, func_type)) return nullptr;
+
+    return std::find_if(this->prog.begin(), this->prog.end(),
+                        [&](const auto & func) -> bool {
+                            return func->name == name and func->type == func_type;
+                        })
+        ->get();
+}
+std::shared_ptr<ir::type> program::lookup_type(const std::string & name) {
+    auto iter = this->types.find(name);
+    if (iter != types.end()) { return iter->second; }
+
+    std::cerr << "Failed to lookup type " << name << "\n";
+    return nullptr;
+}
+
 bool basic_block::terminated() {
     if (contents.empty()) return false;
     else
@@ -64,7 +102,7 @@ bool basic_block::terminated() {
 
 std::ostream & operator<<(std::ostream & lhs, const operand & rhs) {
     lhs << '(';
-    switch (rhs.type) {
+    switch (static_cast<ir_type>(*rhs.type)) {
     case ir_type::unit:
         lhs << "unit";
         break;
@@ -195,7 +233,7 @@ std::optional<operand> three_address::result() const {
     switch (op) {
 
     case operation::call:
-        if (operands.front().type == ir::ir_type::func) return {};
+        if (static_cast<ir_type>(*operands.front().type) == ir::ir_type::func) return {};
         else
             [[fallthrough]];
     case operation::add:
@@ -290,5 +328,17 @@ three_address * function::instruction_number(size_t pos) const {
     if (block_num >= body.size()) return nullptr;
     else
         return &body.at(block_num)->contents.at(pos);
+}
+std::vector<ir::operand> function::parameters() const {
+    std::vector<ir::operand> to_ret;
+    to_ret.reserve(type.parameters.size());
+
+    for (size_t i = 0; i < type.parameters.size(); i++) {
+        auto param_name = param_names.at(i);
+        auto param_type = this->type.parameters.at(i);
+        to_ret.push_back({param_name, param_type, false});
+    }
+
+    return to_ret;
 }
 } // namespace ir

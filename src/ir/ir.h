@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <iosfwd>
+#include <map>
 #include <memory>
 #include <string>
 #include <variant>
@@ -45,7 +46,7 @@ enum struct operation {
 
 struct operand {
     std::variant<std::monostate, bool, long, double, std::string> data;
-    ir_type type;
+    std::shared_ptr<ir::type> type;
     bool is_immediate;
 
   private:
@@ -71,19 +72,22 @@ struct basic_block {
 };
 
 struct function {
-    explicit function(std::string name) : name{std::move(name)} {}
+    explicit function(std::string name, ir::function_type && type)
+        : name{std::move(name)}, type{std::move(type)} {}
 
     [[nodiscard]] three_address * instruction_number(size_t) const;
 
+    [[nodiscard]] std::vector<ir::operand> parameters() const;
+
     std::string name;
-    std::vector<operand> parameters;
-    std::vector<std::unique_ptr<basic_block>> body;
-    ir_type return_type{ir_type::unit};
+    std::vector<std::unique_ptr<basic_block>> body{};
+    std::vector<std::string> param_names;
+    ir::function_type type;
 };
 
 class program {
   public:
-    explicit program() = default;
+    explicit program();
 
     program(const program &) = delete;
     program & operator=(const program &) = delete;
@@ -95,17 +99,30 @@ class program {
 
     [[nodiscard]] bool function_exists(const std::string & name) const noexcept;
     [[nodiscard]] bool function_exists(const std::string & name, size_t param_count) const noexcept;
+    [[nodiscard]] bool function_exists(const std::string & name,
+                                       const ir::function_type & func_type) const noexcept;
+
     [[nodiscard]] function * lookup_function(const std::string & name) const noexcept;
     [[nodiscard]] function * lookup_function(const std::string & name,
                                              size_t param_count) const noexcept;
-    [[nodiscard]] function * register_function(const std::string & name, size_t param_count);
+    [[nodiscard]] function * lookup_function(const std::string & name,
+                                             const ir::function_type & func_type) const noexcept;
+
+    [[nodiscard]] function * register_function(const std::string & name,
+                                               ir::function_type && func_type);
+
+    [[nodiscard]] std::shared_ptr<ir::type> lookup_type(const std::string & name);
 
     void for_each_func(const std::function<void(ir::function *)> & visitor) const {
         for (const auto & func : prog) visitor(func.get());
     }
 
+    [[nodiscard]] std::shared_ptr<ir::type>
+    generate_func_type(const std::vector<std::string> param_types, std::string return_type);
+
   private:
     std::vector<std::unique_ptr<ir::function>> prog;
+    std::map<std::string, std::shared_ptr<ir::type>> types;
 };
 
 } // namespace ir

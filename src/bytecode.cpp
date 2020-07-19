@@ -29,7 +29,7 @@ std::pair<std::optional<operation>, operation> load_64_bits(uint8_t dest, uint64
 operation program::print(const ir::three_address & inst,
                          const std::map<std::string, register_info> & reg_info) {
     auto print_val = inst.inputs().back();
-    switch (print_val.type) {
+    switch (static_cast<ir::ir_type>(*print_val.type)) {
     case ir::ir_type::i32:
         if (not print_val.is_immediate) {
             auto name = std::get<std::string>(print_val.data);
@@ -132,8 +132,8 @@ void program::generate_bytecode(const ir::function & function) {
     };
 
     // Parameters start at 13 and end at 19
-    if (uint8_t param_num = 13; function.parameters.size() <= max_inputs)
-        for (auto & param : function.parameters)
+    if (uint8_t param_num = 13; function.parameters().size() <= max_inputs)
+        for (auto & param : function.parameters())
             register_alloc.insert_or_assign(std::get<std::string>(param.data),
                                             register_info{param_num++, 0});
     else {
@@ -141,7 +141,7 @@ void program::generate_bytecode(const ir::function & function) {
         std::cerr << "Function " << function.name << " has more than " << max_inputs
                   << " parameters.\n"
                      "Currently, "
-                  << function.parameters.size() << " parameter functions are not supported.\n";
+                  << function.parameters().size() << " parameter functions are not supported.\n";
         labels.erase(function.name);
         return;
     }
@@ -162,7 +162,7 @@ void program::generate_bytecode(const ir::function & function) {
                 allocate_register(res.value(), ir_inst_num);
 
             for (auto & input : inst.inputs()) {
-                if (not input.is_immediate and input.type != ir::ir_type::str) {
+                if (not input.is_immediate and *input.type != ir::ir_type::str) {
                     // Either a user defined variable or compiler temporary
                     auto name = std::get<std::string>(input.data);
                     register_alloc.at(name).reads.push_back(ir_inst_num);
@@ -298,7 +298,7 @@ void program::make_instruction(const ir::three_address & instruction,
         auto result_reg = get_register_info(std::get<std::string>(res.value().data)).reg_num;
         auto src = instruction.operands.back();
         if (src.is_immediate) {
-            switch (src.type) {
+            switch (static_cast<ir::ir_type>(*src.type)) {
             case ir::ir_type::str: {
                 auto [first, second]
                     = load_64_bits(result_reg, append_data(std::get<std::string>(src.data)));
@@ -471,7 +471,7 @@ void program::make_instruction(const ir::three_address & instruction,
                             param_reg++, 0,
                             get_register_info(std::get<std::string>(iter->data)).reg_num});
                 else {
-                    switch (iter->type) {
+                    switch (static_cast<ir::ir_type>(*iter->type)) {
 
                     case ir::ir_type::boolean:
                         append_instruction(

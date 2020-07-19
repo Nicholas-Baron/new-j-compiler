@@ -65,7 +65,10 @@ class opt_typed final : public ast::node {
         return written_type.has_value() ? written_type.value().end() : ident.end();
     }
 
+    // The user has explicitly marked a type
     [[nodiscard]] bool user_typed() const noexcept { return written_type.has_value(); }
+
+    // The user has explicitly marked a type and it is a non-primitive type.
     [[nodiscard]] bool user_defined_type() const noexcept {
         return user_typed() and written_type.value().type() == token_type::Identifier;
     }

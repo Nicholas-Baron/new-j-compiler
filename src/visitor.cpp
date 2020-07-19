@@ -141,33 +141,14 @@ void ir_gen_visitor::visit(const ast::node & node) {
         }
 
     } break;
-    case ast::node_type ::function: {
-        auto & func = dynamic_cast<const ast::function &>(node);
-        auto * func_ir = this->prog.register_function(func.identifier(), func.params.size());
-        this->current_func = func_ir;
-        this->append_block(current_func->name + "_entry");
-        this->active_variables.emplace_back();
-        visit(func.name);
-        for (const auto & param : func.params) visit(param);
-        visit(*func.body);
-        if (not func_ir->body.back()->terminated()) {
-            if (func_ir->name == "main")
-                // TODO: Return the actual value from main
-                append_instruction(ir::operation::halt, {{0, ir::ir_type::i32, true}});
-            else
-                append_instruction(ir::operation ::ret);
-        }
-        this->active_variables.pop_back();
-        this->current_func = nullptr;
-    } break;
+    case ast::node_type ::function:
+        generate_function(dynamic_cast<const ast::function &>(node));
+        break;
     case ast::node_type::opt_typed: {
         auto & name = dynamic_cast<const ast::opt_typed &>(node);
         if (current_func != nullptr and name.name() == current_func->name
-            and current_func->return_type == ir::ir_type::unit and name.user_typed()) {
-            auto type = this->type_from(name.type_data());
-            if (type) current_func->return_type = type.value();
-            else
-                std::cerr << "Could not get explicit type for function " << name.name() << '\n';
+            and *current_func->type.return_type == ir::ir_type::unit and name.user_typed()) {
+            std::cerr << "Deprecated path for assigning return type of function\n";
         } else if (name.user_typed())
             std::cerr << "Unknown action to preform on " << name.text() << '\n';
     } break;
@@ -189,17 +170,7 @@ void ir_gen_visitor::visit(const ast::node & node) {
         append_instruction(ir::operation ::call, std::move(args));
     } break;
     case ast::node_type ::parameter: {
-        auto & param = dynamic_cast<const ast::parameter &>(node);
-        auto type = this->type_from(param.val_type);
-        if (type) {
-            auto name = std::get<std::string>(param.name.get_data());
-            auto arg = ir::operand{name, type.value(), false};
-            this->current_func->parameters.push_back(arg);
-            if (not current_scope().try_emplace(name, arg).second) {
-                std::cerr << "Parameter " << name << " not unique?\n";
-            }
-        } else
-            std::cerr << "Could not get type for parameter " << param.name << '\n';
+        std::cerr << "Deprecated path for generating parameter ir\n";
     } break;
     case ast::node_type::if_statement: {
         auto & if_stmt = dynamic_cast<const ast::if_stmt &>(node);
@@ -212,19 +183,19 @@ void ir_gen_visitor::visit(const ast::node & node) {
         append_block(std::move(then_block_name));
         visit(*if_stmt.then_block);
 
+        auto label_type = prog.lookup_type("string");
+
         if (if_stmt.else_block == nullptr and not current_block()->terminated()) {
-            append_instruction(ir::operation ::branch, {{exit_name, ir::ir_type ::str, false}});
+            append_instruction(ir::operation ::branch, {{exit_name, label_type, false}});
             append_block(std::move(exit_name));
         } else if (if_stmt.else_block != nullptr) {
             auto real_exit_name = block_name();
             if (not current_block()->terminated())
-                append_instruction(ir::operation ::branch,
-                                   {{real_exit_name, ir::ir_type ::str, false}});
+                append_instruction(ir::operation ::branch, {{real_exit_name, label_type, false}});
             append_block(std::move(exit_name));
             visit(*if_stmt.else_block);
             if (not current_block()->terminated()) {
-                append_instruction(ir::operation ::branch,
-                                   {{real_exit_name, ir::ir_type ::str, false}});
+                append_instruction(ir::operation ::branch, {{real_exit_name, label_type, false}});
                 append_block(std::move(real_exit_name));
             }
         }
@@ -252,7 +223,8 @@ void ir_gen_visitor::visit(const ast::node & node) {
 
         append_block(std::move(loop_block));
         visit(*loop.body);
-        append_instruction(ir::operation::branch, {{cond_block->name, ir::ir_type::str, false}});
+        append_instruction(ir::operation::branch,
+                           {{cond_block->name, prog.lookup_type("string"), false}});
         append_block(std::move(loop_end));
     } break;
     case ast::node_type::assign_statement: {
@@ -310,7 +282,7 @@ std::optional<ir::operand> ir_gen_visitor::fold_to_constant(ast::expression & ex
     case ast::node_type ::value:
         switch (auto value = dynamic_cast<ast::literal_or_variable &>(expr).data(); value.index()) {
         case 2: // long
-            return std::optional{ir::operand{std::get<2>(value), ir::ir_type::i64, true}};
+            return std::optional{ir::operand{std::get<2>(value), prog.lookup_type("i64"), true}};
 
         case 0: // monostate
         default:
@@ -343,7 +315,7 @@ std::optional<ir::operand> ir_gen_visitor::fold_to_constant(ast::expression & ex
             case 2: // long
                 return std::optional{
                     ir::operand{std::get<2>(lhs.value().data) + std::get<2>(rhs.value().data),
-                                ir::ir_type ::i64, true}};
+                                prog.lookup_type("i64"), true}};
             case 0:
             default:
                 std::cerr << "Unknown type of expression: " << bin_op.text()
@@ -389,7 +361,7 @@ void ir_gen_visitor::dump() const {
             std::cout << func->name << ' ';
             {
                 bool first = true;
-                for (const auto & param : func->parameters) {
+                for (const auto & param : func->parameters()) {
                     if (not first) std::cout << ", ";
                     else
                         first = false;
@@ -427,9 +399,20 @@ std::string ir_gen_visitor::block_name() {
         return current_func->name + std::to_string(this->block_num++);
 }
 
+namespace {
+std::map<std::string, ir::operand> builtins;
+}
+
 ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
-    static std::map<std::string, ir::operand> builtins{
-        {"print", {std::string{"print"}, ir::ir_type ::func, true}}};
+
+    if (builtins.empty()) {
+
+        ir::function_type print_type{{prog.lookup_type("i32")}, prog.lookup_type("unit")};
+
+        builtins.emplace(
+            "print",
+            ir::operand{"print", std::make_shared<ir::function_type>(std::move(print_type)), true});
+    }
 
     switch (expr.type()) {
     case ast::node_type::binary_op: {
@@ -439,7 +422,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         // TODO: Make the ast do type checking
         // TODO: Modularize
 
-        switch (bin.oper()) {
+        switch (auto bool_type = prog.lookup_type("boolean"); bin.oper()) {
         case ast::operation::add:
             append_instruction(ir::operation ::add,
                                {temp_operand(lhs.type, false), lhs, eval_ast(bin.rhs_ref())});
@@ -448,31 +431,31 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
             std::cerr << "Unimplemented operation: " << expr.text() << '\n';
             break;
         case ast::operation::gt:
-            append_instruction(ir::operation::gt, {temp_operand(ir::ir_type::boolean, false), lhs,
-                                                   eval_ast(bin.rhs_ref())});
+            append_instruction(ir::operation::gt,
+                               {temp_operand(bool_type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
         case ast::operation::le:
-            append_instruction(ir::operation ::le, {temp_operand(ir::ir_type ::boolean, false), lhs,
-                                                    eval_ast(bin.rhs_ref())});
+            append_instruction(ir::operation ::le,
+                               {temp_operand(bool_type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
         case ast::operation::eq:
-            append_instruction(ir::operation ::eq, {temp_operand(ir::ir_type ::boolean, false), lhs,
-                                                    eval_ast(bin.rhs_ref())});
+            append_instruction(ir::operation ::eq,
+                               {temp_operand(bool_type, false), lhs, eval_ast(bin.rhs_ref())});
             break;
         case ast::operation::boolean_or:
-            if (lhs.type != ir::ir_type::boolean) return {false, ir::ir_type ::boolean, false};
+            if (*lhs.type != ir::ir_type::boolean) return {false, bool_type, false};
             else {
                 auto false_block_name = block_name();
                 auto true_block_name = block_name();
-                append_instruction(ir::operation::branch,
-                                   {lhs,
-                                    {true_block_name, ir::ir_type::str, false},
-                                    {false_block_name, ir::ir_type::str, false}});
+                auto label_type = prog.lookup_type("string");
+                append_instruction(ir::operation::branch, {lhs,
+                                                           {true_block_name, label_type, false},
+                                                           {false_block_name, label_type, false}});
                 append_block(std::move(false_block_name));
                 auto rhs_val = eval_ast(bin.rhs_ref());
                 append_block(std::move(true_block_name));
                 append_instruction(ir::operation::phi,
-                                   {temp_operand(ir::ir_type::boolean, false), lhs, rhs_val});
+                                   {temp_operand(bool_type, false), lhs, rhs_val});
             }
             break;
         case ast::operation::sub:
@@ -498,18 +481,20 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
     case ast::node_type::func_call: {
         if (current_block() == nullptr) {
             std::cerr << "Found func_call not in a block: " << expr.text() << '\n';
-            return {0l, ir::ir_type ::i32, true};
+            return {0l, prog.lookup_type("i32"), true};
         }
         auto & call = dynamic_cast<const ast::func_call &>(expr);
 
         if (call.name() == nullptr) {
             std::cerr << "Name expression of a function call was null\n";
-            return {0l, ir::ir_type ::i32, true};
+            return {0l, prog.lookup_type("i32"), true};
         }
 
         std::optional<ir::operand> func_name;
         if (call.name()->type() == ast::node_type::value) {
-            func_name = ir::operand{call.name()->text(), ir::ir_type ::func, true};
+            auto call_name = call.name()->text();
+            // TODO: Should lookup_type(some_function_name) return the type of that function?
+            func_name = ir::operand{call_name, prog.lookup_type(call_name), true};
         } else {
             visit(*call.func_name);
             func_name = current_block()->contents.back().result();
@@ -517,7 +502,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
 
         if (not func_name) {
             std::cerr << "Could not get name of function call for " << call.text() << '\n';
-            return {0l, ir::ir_type ::i32, true};
+            return {0l, prog.lookup_type("i32"), true};
         }
 
         auto lookup_name = std::get<std::string>(func_name.value().data);
@@ -526,12 +511,12 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         if (not prog.function_exists(lookup_name, call.arguments.size())) {
             std::cerr << "Function " << std::get<std::string>(func_name.value().data)
                       << " is not defined\n";
-            return {0l, ir::ir_type ::i32, true};
+            return {0l, prog.lookup_type("i32"), true};
         }
 
         auto * callee = prog.lookup_function(lookup_name, call.arguments.size());
 
-        std::vector operands{temp_operand(callee->return_type, false), func_name.value()};
+        std::vector operands{temp_operand(callee->type.return_type, false), func_name.value()};
         for (auto & arg : call.arguments) { operands.push_back(eval_ast(*arg)); }
 
         this->append_instruction(ir::operation ::call, std::move(operands));
@@ -540,7 +525,7 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
         auto & value = dynamic_cast<const ast::literal_or_variable &>(expr);
         switch (value.val.type()) {
         case token_type ::Int:
-            return {std::get<long>(value.data()), ir::ir_type ::i32, true};
+            return {std::get<long>(value.data()), prog.lookup_type("i32"), true};
         case token_type ::Identifier: {
             auto name = std::get<std::string>(value.data());
             if (auto oper = read_variable(name); oper) return oper.value();
@@ -550,14 +535,14 @@ ir::operand ir_gen_visitor::eval_ast(const ast::expression & expr) {
                 std::cerr << "Variable " << value.val << " does not exist\n";
         } break;
         case token_type ::StringLiteral:
-            return {std::get<std::string>(value.data()), ir::ir_type ::str, true};
+            return {std::get<std::string>(value.data()), prog.lookup_type("string"), true};
         default:
             std::cerr << "Cannot get value from " << value.text() << '\n';
         }
     } break;
     default:
         std::cerr << expr.text() << " cannot be evaluated." << std::endl;
-        return {0l, ir::ir_type ::i32, true};
+        return {0l, prog.lookup_type("i32"), true};
     }
     return current_block()->contents.back().result().value();
 }
@@ -571,8 +556,9 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
                                        const std::string & true_branch,
                                        const std::string & false_branch) {
 
-    auto true_operand = ir::operand{true_branch, ir::ir_type::str, false};
-    auto false_operand = ir::operand{false_branch, ir::ir_type::str, false};
+    auto label_type = prog.lookup_type("string");
+    auto true_operand = ir::operand{true_branch, label_type, false};
+    auto false_operand = ir::operand{false_branch, label_type, false};
     switch (expr.type()) {
 
     case ast::node_type::binary_op:
@@ -581,7 +567,7 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
             auto lhs = eval_ast(bin.lhs_ref());
             auto short_circuit = block_name();
 
-            auto short_operand = ir::operand{short_circuit, ir::ir_type::str, false};
+            auto short_operand = ir::operand{short_circuit, label_type, false};
             append_instruction(ir::operation::branch, {lhs, short_operand, false_operand});
 
             append_block(std::move(short_circuit));
@@ -592,7 +578,7 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
             auto lhs = eval_ast(bin.lhs_ref());
             auto short_circuit = block_name();
 
-            auto short_operand = ir::operand{short_circuit, ir::ir_type::str, false};
+            auto short_operand = ir::operand{short_circuit, label_type, false};
             append_instruction(ir::operation::branch, {lhs, true_operand, short_operand});
 
             append_block(std::move(short_circuit));
@@ -615,7 +601,7 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
     case ast::node_type::func_call: {
         auto result = eval_ast(expr);
 
-        if (result.type != ir::ir_type::boolean) {
+        if (*result.type != ir::ir_type::boolean) {
             std::cerr << "Function call " << expr.text() << " does not return boolean" << std::endl;
             return;
         }
@@ -629,4 +615,50 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
         std::cerr << "Unexpected node as condition of if: " << expr.text() << std::endl;
         return;
     }
+}
+void ir_gen_visitor::generate_function(const ast::function & func) {
+
+    auto return_type = prog.lookup_type("unit");
+    {
+        if (auto func_type = func.name.type_data(); func.name.user_typed()) {
+            auto user_specified
+                = prog.lookup_type(std::get<std::string>(func.name.type_data().get_data()));
+            if (user_specified != nullptr) return_type = user_specified;
+        }
+    }
+
+    std::vector<std::shared_ptr<ir::type>> param_types;
+    for (auto & param : func.params) {
+        auto param_type = prog.lookup_type(std::get<std::string>(param.val_type.get_data()));
+        if (param_type != nullptr) param_types.push_back(param_type);
+        else
+            std::cerr << "Could not find type " << param.val_type << '\n';
+    }
+
+    ir::function_type func_type{std::move(param_types), return_type};
+
+    ir::function * func_ir = this->prog.register_function(func.identifier(), std::move(func_type));
+    this->current_func = func_ir;
+    this->append_block(current_func->name + "_entry");
+    this->active_variables.emplace_back();
+
+    for (const auto & param : func.params) visit(param);
+
+    for (size_t i = 0; i < func.params.size(); i++) {
+        auto name = std::get<std::string>(func.params.at(i).name.get_data());
+        if (not current_scope().try_emplace(name, func_ir->parameters().at(i)).second) {
+            std::cerr << "Duplicate parameter: " << name << '\n';
+        }
+    }
+
+    visit(*func.body);
+    if (not func_ir->body.back()->terminated()) {
+        if (func_ir->name == "main")
+            // TODO: Return the actual value from main
+            append_instruction(ir::operation::halt, {{0, prog.lookup_type("i32"), true}});
+        else
+            append_instruction(ir::operation ::ret);
+    }
+    this->active_variables.pop_back();
+    this->current_func = nullptr;
 }

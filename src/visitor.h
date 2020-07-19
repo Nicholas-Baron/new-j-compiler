@@ -55,7 +55,9 @@ class ir_gen_visitor final : public visitor {
     [[nodiscard]] const ir::program & program() const { return prog; }
 
   private:
-    [[nodiscard]] std::optional<ir::ir_type> type_from(const token &);
+    void generate_function(const ast::function &);
+
+    [[deprecated]] [[nodiscard]] std::optional<ir::ir_type> type_from(const token &);
 
     [[nodiscard]] ir::operand eval_ast(const ast::expression &);
     void eval_if_condition(const ast::expression &, const std::string & true_branch,
@@ -73,8 +75,8 @@ class ir_gen_visitor final : public visitor {
     ir::basic_block * append_block(std::string && name);
 
     [[nodiscard]] std::string temp_name();
-    [[nodiscard]] ir::operand temp_operand(ir::ir_type type, bool immediate) {
-        return {temp_name(), type, immediate};
+    [[nodiscard]] ir::operand temp_operand(std::shared_ptr<ir::type> type, bool immediate) {
+        return {temp_name(), std::move(type), immediate};
     }
     [[nodiscard]] std::string block_name();
 
