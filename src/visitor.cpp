@@ -50,7 +50,7 @@ void printing_visitor::visit(const ast::node & node) {
     case ast::node_type::opt_typed:
         std::cout << "Optionally typed " << node.text() << '\n';
         print_indent();
-        std::cout << "Has user type: " << dynamic_cast<const ast::opt_typed &>(node).user_typed()
+        std::cout << "Has user type: " << dynamic_cast<const ast::opt_typed &>(node).user_explicit()
                   << '\n';
         break;
     case ast::node_type::func_call: {
@@ -147,9 +147,9 @@ void ir_gen_visitor::visit(const ast::node & node) {
     case ast::node_type::opt_typed: {
         auto & name = dynamic_cast<const ast::opt_typed &>(node);
         if (current_func != nullptr and name.name() == current_func->name
-            and *current_func->type.return_type == ir::ir_type::unit and name.user_typed()) {
+            and *current_func->type.return_type == ir::ir_type::unit and name.user_explicit()) {
             std::cerr << "Deprecated path for assigning return type of function\n";
-        } else if (name.user_typed())
+        } else if (name.user_explicit())
             std::cerr << "Unknown action to preform on " << name.text() << '\n';
     } break;
     case ast::node_type ::statement_block:
@@ -282,7 +282,7 @@ std::optional<ir::operand> ir_gen_visitor::fold_to_constant(ast::expression & ex
     case ast::node_type ::value:
         switch (auto value = dynamic_cast<ast::literal_or_variable &>(expr).data(); value.index()) {
         case 2: // long
-            return std::optional{ir::operand{std::get<2>(value), prog.lookup_type("i64"), true}};
+            return std::optional{ir::operand{std::get<2>(value), prog.lookup_type("int64"), true}};
 
         case 0: // monostate
         default:
@@ -315,7 +315,7 @@ std::optional<ir::operand> ir_gen_visitor::fold_to_constant(ast::expression & ex
             case 2: // long
                 return std::optional{
                     ir::operand{std::get<2>(lhs.value().data) + std::get<2>(rhs.value().data),
-                                prog.lookup_type("i64"), true}};
+                                prog.lookup_type("int64"), true}};
             case 0:
             default:
                 std::cerr << "Unknown type of expression: " << bin_op.text()
