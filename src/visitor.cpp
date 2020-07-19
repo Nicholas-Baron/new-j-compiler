@@ -379,18 +379,23 @@ void ir_gen_visitor::dump() const {
     });
 }
 std::string ir_gen_visitor::temp_name() { return "temp_" + std::to_string(this->temp_num++); }
-std::optional<ir::ir_type> ir_gen_visitor::type_from(const token & tok) {
+std::shared_ptr<ir::type> ir_gen_visitor::type_from(const token & tok) {
     switch (tok.type()) {
-    case token_type ::Int32:
-        return ir::ir_type ::i32;
-    case token_type ::Int64:
-        return ir::ir_type ::i64;
-    case token_type ::Struct:
-        std::cerr << "Currently compiler does not support user-defined types\n";
-        return {};
+    case token_type::Identifier: {
+        auto user_specified = prog.lookup_type(std::get<std::string>(tok.get_data()));
+        if (user_specified != nullptr) return user_specified;
+        else {
+            std::cerr << "Could find type named " << tok << '\n';
+            return nullptr;
+        }
+    } break;
+    case token_type::Int32:
+        return prog.lookup_type("int32");
+    case token_type::Int64:
+        return prog.lookup_type("int64");
     default:
-        std::cerr << "Could not get type from " << tok << '\n';
-        return {};
+        std::cerr << "Cannot use " << tok << " as a type\n";
+        return nullptr;
     }
 }
 std::string ir_gen_visitor::block_name() {
@@ -619,17 +624,17 @@ void ir_gen_visitor::eval_if_condition(const ast::expression & expr,
 void ir_gen_visitor::generate_function(const ast::function & func) {
 
     auto return_type = prog.lookup_type("unit");
-    {
-        if (auto func_type = func.name.type_data(); func.name.user_typed()) {
-            auto user_specified
-                = prog.lookup_type(std::get<std::string>(func.name.type_data().get_data()));
-            if (user_specified != nullptr) return_type = user_specified;
+
+    if (auto func_type = func.name.type_data(); func.name.user_explicit()) {
+        return_type = type_from(func_type);
+        if (return_type == nullptr) {
+            std::cerr << "Cannot use " << func_type << " as a return type.\n";
         }
     }
 
     std::vector<std::shared_ptr<ir::type>> param_types;
     for (auto & param : func.params) {
-        auto param_type = prog.lookup_type(std::get<std::string>(param.val_type.get_data()));
+        auto param_type = type_from(param.val_type);
         if (param_type != nullptr) param_types.push_back(param_type);
         else
             std::cerr << "Could not find type " << param.val_type << '\n';

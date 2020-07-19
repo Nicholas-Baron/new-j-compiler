@@ -57,7 +57,7 @@ class ir_gen_visitor final : public visitor {
   private:
     void generate_function(const ast::function &);
 
-    [[deprecated]] [[nodiscard]] std::optional<ir::ir_type> type_from(const token &);
+    [[nodiscard]] std::shared_ptr<ir::type> type_from(const token &);
 
     [[nodiscard]] ir::operand eval_ast(const ast::expression &);
     void eval_if_condition(const ast::expression &, const std::string & true_branch,
