@@ -647,7 +647,9 @@ void ir_gen_visitor::generate_function(const ast::function & func) {
     this->append_block(current_func->name + "_entry");
     this->active_variables.emplace_back();
 
-    for (const auto & param : func.params) visit(param);
+    for (const auto & param : func.params) {
+        func_ir->param_names.push_back(std::get<std::string>(param.name.get_data()));
+    }
 
     for (size_t i = 0; i < func.params.size(); i++) {
         auto name = std::get<std::string>(func.params.at(i).name.get_data());
